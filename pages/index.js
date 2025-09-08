@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -6,82 +6,22 @@ export default function Home() {
   const [userName, setUserName] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [debugMessages, setDebugMessages] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
 
-  // Google Calendar Configuration
-  const GOOGLE_CLIENT_ID = '940233544658-gec57taau0pkrlcdd81aqs4ssi1ll9bt.apps.googleusercontent.com';
-  const REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
-  const SCOPE = 'https://www.googleapis.com/auth/calendar';
-
-  const addDebugMessage = (message) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setDebugMessages(prev => [...prev, `${timestamp}: ${message}`]);
-    console.log('Debug:', message);
-  };
-
-  // Check if user is returning from Google OAuth
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const error = urlParams.get('error');
-
-      if (code) {
-        addDebugMessage('OAuth authorization code received');
-        setIsGoogleConnected(true);
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-        alert('Google Calendar connected successfully!');
-      } else if (error) {
-        addDebugMessage(`OAuth error: ${error}`);
-        alert(`Google connection failed: ${error}`);
-      }
-    }
-  }, []);
-
-  // Direct OAuth URL method - most reliable
-  const connectGoogleCalendar = () => {
-    addDebugMessage('Starting direct OAuth flow...');
-    
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
-      `scope=${encodeURIComponent(SCOPE)}&` +
-      `response_type=code&` +
-      `access_type=offline&` +
-      `prompt=consent`;
-
-    addDebugMessage(`Redirecting to: ${authUrl}`);
-    
-    // Direct redirect to Google OAuth
-    window.location.href = authUrl;
-  };
-
-  const disconnectGoogleCalendar = () => {
-    addDebugMessage('Disconnecting Google Calendar...');
-    setIsGoogleConnected(false);
-    alert('Google Calendar disconnected');
-  };
-
-  const handleLogin = (type, name) => {
-    setUserType(type);
-    setUserName(name);
-    setIsLoggedIn(true);
-  };
-
-  // Sample data
-  const appointments = [
+  const [appointments, setAppointments] = useState([
     {
       id: 1,
       date: '2024-03-15',
       time: '2:00 PM',
       type: 'Therapy Session',
       client: 'Sarah Johnson',
-      therapist: 'Dr. Rebecca B. Headley'
+      therapist: 'Dr. Rebecca B. Headley',
+      googleEventId: null
     }
-  ];
+  ]);
 
-  const clients = [
+  const [clients, setClients] = useState([
     {
       id: 1,
       name: 'Sarah Johnson',
@@ -90,7 +30,87 @@ export default function Home() {
       progress: 75,
       totalSessions: 12
     }
-  ];
+  ]);
+
+  // Simple Google Calendar integration using direct calendar links
+  const connectGoogleCalendar = () => {
+    setIsGoogleConnected(true);
+    alert('Google Calendar integration enabled! New appointments will include calendar links.');
+  };
+
+  const disconnectGoogleCalendar = () => {
+    setIsGoogleConnected(false);
+    alert('Google Calendar integration disabled.');
+  };
+
+  const createCalendarLink = (appointment) => {
+    const startDate = new Date(`${appointment.date} ${appointment.time}`);
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour later
+    
+    const formatDate = (date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const title = encodeURIComponent(`${appointment.type} - ${appointment.client}`);
+    const details = encodeURIComponent(`Therapy appointment with ${appointment.client}`);
+    
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${details}`;
+  };
+
+  const handleLogin = (type, name) => {
+    setUserType(type);
+    setUserName(name);
+    setIsLoggedIn(true);
+  };
+
+  const openModal = (type) => {
+    setModalType(type);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setModalType('');
+  };
+
+  const handleScheduleAppointment = (formData) => {
+    const newAppointment = {
+      id: appointments.length + 1,
+      date: formData.date,
+      time: formData.time,
+      type: formData.type,
+      client: formData.client,
+      therapist: 'Dr. Rebecca B. Headley',
+      googleEventId: isGoogleConnected ? 'calendar-link' : null
+    };
+
+    setAppointments([...appointments, newAppointment]);
+    closeModal();
+    
+    if (isGoogleConnected) {
+      const calendarLink = createCalendarLink(newAppointment);
+      const openCalendar = window.confirm('Appointment scheduled! Would you like to add it to your Google Calendar now?');
+      if (openCalendar) {
+        window.open(calendarLink, '_blank');
+      }
+    } else {
+      alert('Appointment scheduled successfully!');
+    }
+  };
+
+  const handleAddClient = (formData) => {
+    const newClient = {
+      id: clients.length + 1,
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      progress: 0,
+      totalSessions: 0
+    };
+    setClients([...clients, newClient]);
+    closeModal();
+    alert('Client added successfully!');
+  };
 
   if (!isLoggedIn) {
     return (
@@ -282,8 +302,8 @@ export default function Home() {
                     </p>
                     <p style={{ margin: '0.5rem 0 0 0', color: '#64748b', fontSize: '0.9rem' }}>
                       {isGoogleConnected 
-                        ? 'Calendar sync is active!' 
-                        : 'Connect to sync appointments automatically'
+                        ? 'Calendar links will be generated for new appointments' 
+                        : 'Enable to create Google Calendar links automatically'
                       }
                     </p>
                   </div>
@@ -303,7 +323,7 @@ export default function Home() {
                         fontWeight: 'bold'
                       }}
                     >
-                      🔗 Connect Google Calendar
+                      🔗 Enable Calendar Links
                     </button>
                   ) : (
                     <button
@@ -320,7 +340,7 @@ export default function Home() {
                         fontWeight: 'bold'
                       }}
                     >
-                      🔌 Disconnect
+                      🔌 Disable
                     </button>
                   )}
                 </div>
@@ -330,80 +350,13 @@ export default function Home() {
                     backgroundColor: '#fef3c7',
                     padding: '1rem',
                     borderRadius: '8px',
-                    border: '1px solid #f59e0b',
-                    marginBottom: '1rem'
+                    border: '1px solid #f59e0b'
                   }}>
                     <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
-                      💡 <strong>Why connect?</strong> Automatically sync your appointments to Google Calendar and send calendar invitations to your clients.
+                      💡 <strong>Enable calendar links</strong> to automatically generate Google Calendar links for new appointments. No complex OAuth setup required!
                     </p>
                   </div>
                 )}
-
-                {/* Current URL Info */}
-                <div style={{
-                  backgroundColor: '#f1f5f9',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  marginBottom: '1rem'
-                }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '0.9rem' }}>
-                    🔧 OAuth Configuration:
-                  </h4>
-                  <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#475569' }}>
-                    <div><strong>Client ID:</strong> {GOOGLE_CLIENT_ID}</div>
-                    <div><strong>Redirect URI:</strong> {REDIRECT_URI}</div>
-                    <div><strong>Scope:</strong> {SCOPE}</div>
-                  </div>
-                </div>
-
-                {/* Debug Section */}
-                <div style={{
-                  backgroundColor: '#f1f5f9',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1'
-                }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '0.9rem' }}>
-                    🔍 Debug Information:
-                  </h4>
-                  <div style={{
-                    maxHeight: '150px',
-                    overflowY: 'auto',
-                    fontSize: '0.8rem',
-                    fontFamily: 'monospace'
-                  }}>
-                    {debugMessages.length === 0 ? (
-                      <div style={{ color: '#64748b' }}>No debug messages yet...</div>
-                    ) : (
-                      debugMessages.slice(-10).map((msg, index) => (
-                        <div key={index} style={{ 
-                          color: msg.includes('ERROR') ? '#dc2626' : '#475569',
-                          marginBottom: '0.25rem'
-                        }}>
-                          {msg}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  {debugMessages.length > 0 && (
-                    <button
-                      onClick={() => setDebugMessages([])}
-                      style={{
-                        marginTop: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        backgroundColor: '#64748b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Clear Debug Log
-                    </button>
-                  )}
-                </div>
               </div>
 
               {/* Quick Stats */}
@@ -448,7 +401,7 @@ export default function Home() {
                   <h3 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0', color: isGoogleConnected ? '#059669' : '#dc2626' }}>
                     {isGoogleConnected ? '✅' : '❌'}
                   </h3>
-                  <p style={{ margin: 0, color: '#64748b' }}>Calendar Sync</p>
+                  <p style={{ margin: 0, color: '#64748b' }}>Calendar Links</p>
                 </div>
               </div>
             </div>
@@ -456,9 +409,34 @@ export default function Home() {
 
           {activeTab === 'appointments' && (
             <div>
-              <h2 style={{ fontSize: '2rem', marginBottom: '2rem', color: '#1e293b' }}>
-                📅 Appointments
-              </h2>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '2rem'
+              }}>
+                <h2 style={{ fontSize: '2rem', margin: 0, color: '#1e293b' }}>
+                  📅 Appointments
+                </h2>
+                {userType === 'therapist' && (
+                  <button
+                    onClick={() => openModal('schedule')}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#4f46e5',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      fontFamily: 'Cambria, serif',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ➕ Schedule New Appointment
+                  </button>
+                )}
+              </div>
 
               <div style={{ 
                 display: 'grid', 
@@ -484,15 +462,32 @@ export default function Home() {
                       <p style={{ margin: '0 0 0.25rem 0', color: '#64748b' }}>
                         👤 {userType === 'therapist' ? appointment.client : appointment.therapist}
                       </p>
-                      {isGoogleConnected && (
+                      {appointment.googleEventId && (
                         <p style={{ margin: '0.25rem 0 0 0', color: '#059669', fontSize: '0.9rem' }}>
-                          ✅ Synced to Google Calendar
+                          ✅ Calendar link available
                         </p>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {appointment.googleEventId && (
+                        <button
+                          onClick={() => window.open(createCalendarLink(appointment), '_blank')}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: '#4285f4',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            fontFamily: 'Cambria, serif'
+                          }}
+                        >
+                          📅 Add to Calendar
+                        </button>
+                      )}
                       <button
-                        onClick={() => alert('Reschedule feature coming soon!')}
+                        onClick={() => openModal('reschedule')}
                         style={{
                           padding: '0.5rem 1rem',
                           backgroundColor: '#f59e0b',
@@ -530,9 +525,34 @@ export default function Home() {
 
           {activeTab === 'clients' && (
             <div>
-              <h2 style={{ fontSize: '2rem', marginBottom: '2rem', color: '#1e293b' }}>
-                👥 Clients
-              </h2>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '2rem'
+              }}>
+                <h2 style={{ fontSize: '2rem', margin: 0, color: '#1e293b' }}>
+                  👥 Clients
+                </h2>
+                {userType === 'therapist' && (
+                  <button
+                    onClick={() => openModal('addClient')}
+                    style={{
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                      fontFamily: 'Cambria, serif',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ➕ Add New Client
+                  </button>
+                )}
+              </div>
 
               <div style={{ 
                 display: 'grid', 
@@ -567,7 +587,7 @@ export default function Home() {
                       </div>
                       {userType === 'therapist' && (
                         <button
-                          onClick={() => alert('Edit client feature coming soon!')}
+                          onClick={() => openModal('editClient')}
                           style={{
                             padding: '0.5rem 1rem',
                             backgroundColor: '#64748b',
@@ -618,6 +638,378 @@ export default function Home() {
           )}
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '2rem',
+            borderRadius: '12px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h3 style={{ margin: 0, color: '#1e293b' }}>
+                {modalType === 'schedule' && '📅 Schedule New Appointment'}
+                {modalType === 'reschedule' && '📅 Reschedule Appointment'}
+                {modalType === 'addClient' && '👤 Add New Client'}
+                {modalType === 'editClient' && '✏️ Edit Client Information'}
+              </h3>
+              <button
+                onClick={closeModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#64748b'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {(modalType === 'schedule' || modalType === 'reschedule') && (
+              <AppointmentForm 
+                onSubmit={handleScheduleAppointment}
+                clients={clients}
+                isReschedule={modalType === 'reschedule'}
+                existingAppointment={modalType === 'reschedule' ? appointments[0] : null}
+              />
+            )}
+
+            {(modalType === 'addClient' || modalType === 'editClient') && (
+              <ClientForm 
+                onSubmit={handleAddClient}
+                isEdit={modalType === 'editClient'}
+                existingClient={modalType === 'editClient' ? clients[0] : null}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Appointment Form Component
+function AppointmentForm({ onSubmit, clients, isReschedule, existingAppointment }) {
+  const [formData, setFormData] = useState({
+    date: existingAppointment?.date || '',
+    time: existingAppointment?.time || '',
+    type: existingAppointment?.type || 'Therapy Session',
+    client: existingAppointment?.client || ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.date || !formData.time || !formData.client) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Client *
+        </label>
+        <select
+          value={formData.client}
+          onChange={(e) => setFormData({ ...formData, client: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        >
+          <option value="">Select a client...</option>
+          {clients.map((client) => (
+            <option key={client.id} value={client.name}>
+              {client.name}
+            </option>
+          ))}
+      </div>
+
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Session Type
+        </label>
+        <select
+          value={formData.type}
+          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+        >
+          <option value="Initial Consultation">Initial Consultation</option>
+          <option value="Therapy Session">Therapy Session</option>
+          <option value="Follow-up">Follow-up</option>
+          <option value="Assessment">Assessment</option>
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#4f46e5',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontFamily: 'Cambria, serif',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        {isReschedule ? '📅 Reschedule Appointment' : '📅 Schedule Appointment'}
+      </button>
+    </form>
+  );
+}
+
+// Client Form Component
+function ClientForm({ onSubmit, isEdit, existingClient }) {
+  const [formData, setFormData] = useState({
+    name: existingClient?.name || '',
+    email: existingClient?.email || '',
+    phone: existingClient?.phone || '',
+    dateOfBirth: existingClient?.dateOfBirth || '',
+    insurance: existingClient?.insurance || '',
+    notes: existingClient?.notes || ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.phone) {
+      alert('Please fill in all required fields (Name, Email, Phone).');
+      return;
+    }
+    onSubmit(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Full Name *
+        </label>
+        <input
+          type="text"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        />
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Email Address *
+        </label>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        />
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Phone Number *
+        </label>
+        <input
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        />
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Date of Birth
+        </label>
+        <input
+          type="date"
+          value={formData.dateOfBirth}
+          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Insurance Provider
+        </label>
+        <input
+          type="text"
+          value={formData.insurance}
+          onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
+          placeholder="e.g., Blue Cross Blue Shield"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Clinical Notes
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          placeholder="Any relevant clinical information..."
+          rows={3}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif',
+            resize: 'vertical'
+          }}
+        />
+      </div>
+
+      <button
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#059669',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontFamily: 'Cambria, serif',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        {isEdit ? '✏️ Update Client' : '👤 Add Client'}
+      </button>
+    </form>
+  );
+}
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Date *
+        </label>
+        <input
+          type="date"
+          value={formData.date}
+          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        />
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Time *
+        </label>
+        <select
+          value={formData.time}
+          onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+          required
+        >
+          <option value="">Select time...</option>
+          <option value="9:00 AM">9:00 AM</option>
+          <option value="10:00 AM">10:00 AM</option>
+          <option value="11:00 AM">11:00 AM</option>
+          <option value="12:00 PM">12:00 PM</option>
+          <option value="1:00 PM">1:00 PM</option>
+          <option value="2:00 PM">2:00 PM</option>
+          <option value="3:00 PM">3:00 PM</option>
+          <option value="4:00 PM">4:00 PM</option>
+          <option value="5:00 PM">5:00 PM</option>
+        </select>
