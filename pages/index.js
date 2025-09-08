@@ -1,312 +1,4 @@
-onClick={() => {
-                              setActiveTab('documents');
-                              logAuditEvent('CLIENT_DOCUMENTS_ACCESSED', { clientId: client.id });
-                            }}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              backgroundColor: '#4f46e5',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              fontSize: '0.9rem',
-                              fontFamily: 'Cambria, serif'
-            }}
-          />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Assigned Therapist
-        </label>
-        <select
-          value={formData.assignedTherapist}
-          onChange={(e) => setFormData({ ...formData, assignedTherapist: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        >
-          <option value="">Select a therapist...</option>
-          {teamMembers.filter(member => member.role === 'therapist').map((therapist) => (
-            <option key={therapist.id} value={therapist.id}>
-              {therapist.name} - {therapist.specialties.join(', ')}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <button
-        type="submit"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#059669',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '1rem',
-          fontFamily: 'Cambria, serif',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        👤 Add Client
-      </button>
-    </form>
-  );
-}
-
-// Clinical Document Form Component
-function DocumentForm({ document, onSubmit }) {
-  const [formData, setFormData] = useState({});
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Validate required fields
-    const requiredFields = document.fields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !formData[field.name]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in required fields: ${missingFields.map(f => f.label).join(', ')}`);
-      return;
-    }
-
-    onSubmit({
-      documentId: document.id,
-      documentType: document.type,
-      responses: formData,
-      completedAt: new Date().toISOString()
-    });
-  };
-
-  const handleFieldChange = (fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-  };
-
-  const renderField = (field) => {
-    const commonStyle = {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      fontFamily: 'Cambria, serif'
-    };
-
-    switch (field.type) {
-      case 'text':
-        return (
-          <input
-            type="text"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            placeholder={field.placeholder || ''}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'email':
-        return (
-          <input
-            type="email"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'date':
-        return (
-          <input
-            type="date"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            placeholder={field.placeholder || ''}
-            rows={4}
-            style={{
-              ...commonStyle,
-              resize: 'vertical'
-            }}
-            required={field.required}
-          />
-        );
-
-      case 'select':
-        return (
-          <select
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          >
-            <option value="">Select an option...</option>
-            {field.options.map((option, index) => (
-              <option key={index} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-
-      case 'checkbox':
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
-            {field.options.map((option, index) => (
-              <label key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  checked={(formData[field.name] || []).includes(option)}
-                  onChange={(e) => {
-                    const currentValues = formData[field.name] || [];
-                    const newValues = e.target.checked
-                      ? [...currentValues, option]
-                      : currentValues.filter(v => v !== option);
-                    handleFieldChange(field.name, newValues);
-                  }}
-                  style={{ margin: 0 }}
-                />
-                <span style={{ fontSize: '0.9rem' }}>{option}</span>
-              </label>
-            ))}
-          </div>
-        );
-
-      case 'range':
-        return (
-          <div>
-            <input
-              type="range"
-              min={field.min || 0}
-              max={field.max || 100}
-              value={formData[field.name] || field.min || 0}
-              onChange={(e) => handleFieldChange(field.name, e.target.value)}
-              style={{ width: '100%' }}
-            />
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
-              Value: {formData[field.name] || field.min || 0}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <input
-            type="text"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-    }
-  };
-
-  return (
-    <div>
-      <div style={{
-        marginBottom: '2rem',
-        padding: '1rem',
-        backgroundColor: '#f8fafc',
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{document.name}</h4>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-          Please complete all required fields marked with an asterisk (*).
-        </p>
-        {document.content && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '1rem', 
-            backgroundColor: '#white', 
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-            color: '#64748b'
-          }}>
-            {document.content}
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {document.fields.map((field, index) => (
-          <div key={index} style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem', 
-              color: '#374151', 
-              fontWeight: 'bold' 
-            }}>
-              {field.label}
-              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
-            </label>
-            {renderField(field)}
-          </div>
-        ))}
-
-        <div style={{
-          marginTop: '2rem',
-          padding: '1rem',
-          backgroundColor: '#fef3c7',
-          borderRadius: '8px',
-          border: '1px solid #f59e0b',
-          marginBottom: '1.5rem'
-        }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
-            🔒 <strong>HIPAA Notice:</strong> This information is protected health information and will be stored securely in compliance with HIPAA regulations. Your data is encrypted and access is logged for security purposes.
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#4f46e5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          📝 Complete Document
-        </button>
-      </form>
-    </div>
-  );
-} 'Cambria, serif'
-                            }}
-                          >
-                            📋 Documents
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div>
+<div>
                       <div style={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
@@ -334,7 +26,6 @@ function DocumentForm({ document, onSubmit }) {
                       </div>
                     </div>
 
-                    {/* Consent Forms Status */}
                     <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
                       <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>
                         Consent Forms Status:
@@ -412,7 +103,7 @@ function DocumentForm({ document, onSubmit }) {
                         </button>
                         {userType === 'therapist' && (
                           <button
-                            onClick={() => openModal(`review-${doc.id}`)}
+                            onClick={() => alert('Review responses feature coming soon!')}
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: '#059669',
@@ -433,7 +124,6 @@ function DocumentForm({ document, onSubmit }) {
                 </div>
               </div>
 
-              {/* Document Completion Statistics */}
               <div style={{
                 backgroundColor: 'white',
                 padding: '1.5rem',
@@ -446,7 +136,7 @@ function DocumentForm({ document, onSubmit }) {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
                   {clinicalDocuments.map((doc) => {
-                    const completionRate = Math.floor(Math.random() * 100); // Demo data
+                    const completionRate = Math.floor(Math.random() * 100);
                     return (
                       <div key={doc.id} style={{
                         padding: '1rem',
@@ -493,10 +183,7 @@ function DocumentForm({ document, onSubmit }) {
                 👨‍⚕️ Team Management
               </h2>
 
-              <div style={{ 
-                display: 'grid', 
-                gap: '1rem'
-              }}>
+              <div style={{ display: 'grid', gap: '1rem' }}>
                 {teamMembers.map((member) => (
                   <div key={member.id} style={{
                     backgroundColor: 'white',
@@ -536,7 +223,6 @@ function DocumentForm({ document, onSubmit }) {
                       </div>
                     </div>
                     
-                    {/* Client Assignment Stats */}
                     <div style={{
                       marginTop: '1rem',
                       padding: '0.75rem',
@@ -555,7 +241,6 @@ function DocumentForm({ document, onSubmit }) {
                 ))}
               </div>
 
-              {/* HIPAA Audit Log Preview */}
               <div style={{
                 backgroundColor: 'white',
                 padding: '1.5rem',
@@ -597,7 +282,6 @@ function DocumentForm({ document, onSubmit }) {
         </div>
       </div>
 
-      {/* Enhanced Modal System */}
       {showModal && (
         <div style={{
           position: 'fixed',
@@ -629,11 +313,8 @@ function DocumentForm({ document, onSubmit }) {
             }}>
               <h3 style={{ margin: 0, color: '#1e293b' }}>
                 {modalType === 'schedule' && '📅 Schedule New Appointment'}
-                {modalType === 'reschedule' && '📅 Reschedule Appointment'}
                 {modalType === 'addClient' && '👤 Add New Client'}
-                {modalType === 'editClient' && '✏️ Edit Client Information'}
                 {modalType.startsWith('document-') && '📝 Complete Clinical Document'}
-                {modalType.startsWith('review-') && '👁️ Review Document Responses'}
               </h3>
               <button
                 onClick={closeModal}
@@ -684,7 +365,7 @@ function DocumentForm({ document, onSubmit }) {
   );
 }
 
-// Enhanced Appointment Form Component
+// Appointment Form Component
 function AppointmentForm({ onSubmit, clients, teamMembers }) {
   const [formData, setFormData] = useState({
     date: '',
@@ -861,6 +542,260 @@ function AppointmentForm({ onSubmit, clients, teamMembers }) {
         style={{
           width: '100%',
           padding: '0.75rem',
+          backgroundColor: '#059669',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontFamily: 'Cambria, serif',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        👤 Add Client
+      </button>
+    </form>
+  );
+}
+
+// Clinical Document Form Component
+function DocumentForm({ document, onSubmit }) {
+  const [formData, setFormData] = useState({});
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    const requiredFields = document.fields.filter(field => field.required);
+    const missingFields = requiredFields.filter(field => !formData[field.name]);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in required fields: ${missingFields.map(f => f.label).join(', ')}`);
+      return;
+    }
+
+    onSubmit({
+      documentId: document.id,
+      documentType: document.type,
+      responses: formData,
+      completedAt: new Date().toISOString()
+    });
+  };
+
+  const handleFieldChange = (fieldName, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
+
+  const renderField = (field) => {
+    const commonStyle = {
+      width: '100%',
+      padding: '0.75rem',
+      border: '2px solid #e5e7eb',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      fontFamily: 'Cambria, serif'
+    };
+
+    switch (field.type) {
+      case 'text':
+        return (
+          <input
+            type="text"
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            placeholder={field.placeholder || ''}
+            style={commonStyle}
+            required={field.required}
+          />
+        );
+
+      case 'email':
+        return (
+          <input
+            type="email"
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            style={commonStyle}
+            required={field.required}
+          />
+        );
+
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            style={commonStyle}
+            required={field.required}
+          />
+        );
+
+      case 'textarea':
+        return (
+          <textarea
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            placeholder={field.placeholder || ''}
+            rows={4}
+            style={{
+              ...commonStyle,
+              resize: 'vertical'
+            }}
+            required={field.required}
+          />
+        );
+
+      case 'select':
+        return (
+          <select
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            style={commonStyle}
+            required={field.required}
+          >
+            <option value="">Select an option...</option>
+            {field.options.map((option, index) => (
+              <option key={index} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+
+      case 'checkbox':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
+            {field.options.map((option, index) => (
+              <label key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input
+                  type="checkbox"
+                  checked={(formData[field.name] || []).includes(option)}
+                  onChange={(e) => {
+                    const currentValues = formData[field.name] || [];
+                    const newValues = e.target.checked
+                      ? [...currentValues, option]
+                      : currentValues.filter(v => v !== option);
+                    handleFieldChange(field.name, newValues);
+                  }}
+                  style={{ margin: 0 }}
+                />
+                <span style={{ fontSize: '0.9rem' }}>{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+
+      case 'range':
+        return (
+          <div>
+            <input
+              type="range"
+              min={field.min || 0}
+              max={field.max || 100}
+              value={formData[field.name] || field.min || 0}
+              onChange={(e) => handleFieldChange(field.name, e.target.value)}
+              style={{ width: '100%' }}
+            />
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
+              Value: {formData[field.name] || field.min || 0}
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <input
+            type="text"
+            value={formData[field.name] || ''}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            style={commonStyle}
+            required={field.required}
+          />
+        );
+    }
+  };
+
+  return (
+    <div>
+      <div style={{
+        marginBottom: '2rem',
+        padding: '1rem',
+        backgroundColor: '#f8fafc',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{document.name}</h4>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+          Please complete all required fields marked with an asterisk (*).
+        </p>
+        {document.content && (
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem', 
+            backgroundColor: 'white', 
+            borderRadius: '6px',
+            fontSize: '0.9rem',
+            color: '#64748b'
+          }}>
+            {document.content}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        {document.fields.map((field, index) => (
+          <div key={index} style={{ marginBottom: '1.5rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem', 
+              color: '#374151', 
+              fontWeight: 'bold' 
+            }}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {renderField(field)}
+          </div>
+        ))}
+
+        <div style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          backgroundColor: '#fef3c7',
+          borderRadius: '8px',
+          border: '1px solid #f59e0b',
+          marginBottom: '1.5rem'
+        }}>
+          <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
+            🔒 <strong>HIPAA Notice:</strong> This information is protected health information and will be stored securely in compliance with HIPAA regulations. Your data is encrypted and access is logged for security purposes.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#4f46e5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          📝 Complete Document
+        </button>
+      </form>
+    </div>
+  );
+}
+        style={{
+          width: '100%',
+          padding: '0.75rem',
           backgroundColor: '#4f46e5',
           color: 'white',
           border: 'none',
@@ -877,7 +812,7 @@ function AppointmentForm({ onSubmit, clients, teamMembers }) {
   );
 }
 
-// Enhanced Client Form Component
+// Client Form Component
 function ClientForm({ onSubmit, teamMembers }) {
   const [formData, setFormData] = useState({
     firstName: '',
@@ -1082,7 +1017,39 @@ function ClientForm({ onSubmit, teamMembers }) {
               border: '2px solid #e5e7eb',
               borderRadius: '8px',
               fontSize: '1rem',
-              fontFamily:import { useState, useEffect } from 'react';
+              fontFamily: 'Cambria, serif'
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
+          Assigned Therapist
+        </label>
+        <select
+          value={formData.assignedTherapist}
+          onChange={(e) => setFormData({ ...formData, assignedTherapist: e.target.value })}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif'
+          }}
+        >
+          <option value="">Select a therapist...</option>
+          {teamMembers.filter(member => member.role === 'therapist').map((therapist) => (
+            <option key={therapist.id} value={therapist.id}>
+              {therapist.name} - {therapist.specialties.join(', ')}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        type="submit"import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -1097,7 +1064,7 @@ export default function Home() {
   // Google SSO Configuration
   const GOOGLE_CLIENT_ID = '940233544658-gec57taau0pkrlcdd81aqs4ssi1ll9bt.apps.googleusercontent.com';
 
-  // HIPAA-Compliant Data Storage (encrypted in production)
+  // HIPAA-Compliant Data Storage
   const [appointments, setAppointments] = useState([
     {
       id: 1,
@@ -1107,10 +1074,9 @@ export default function Home() {
       clientId: 1,
       therapistId: 1,
       status: 'scheduled',
-      meetingLink: '',
+      meetingLink: 'https://meet.google.com/abc-defg-hij',
       notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toISOString()
     }
   ]);
 
@@ -1131,8 +1097,7 @@ export default function Home() {
       assignedTherapist: 1,
       consentForms: ['intake', 'privacy'],
       clinicalNotes: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toISOString()
     }
   ]);
 
@@ -1174,7 +1139,7 @@ export default function Home() {
       name: 'Privacy Policy Consent',
       type: 'consent',
       required: true,
-      content: 'I acknowledge that I have read and understand the privacy policy...',
+      content: 'I acknowledge that I have read and understand the privacy policy and consent to treatment.',
       fields: [
         { name: 'consent', label: 'I consent to treatment', type: 'checkbox', required: true },
         { name: 'signature', label: 'Digital Signature', type: 'text', required: true },
@@ -1203,7 +1168,7 @@ export default function Home() {
       userEmail: userEmail,
       action: action,
       details: details,
-      ipAddress: 'xxx.xxx.xxx.xxx', // In production, capture real IP
+      ipAddress: 'xxx.xxx.xxx.xxx',
       sessionId: 'session_' + Math.random().toString(36)
     };
     setAuditLog(prev => [...prev, auditEntry]);
@@ -1238,7 +1203,6 @@ export default function Home() {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
       const userEmail = payload.email;
       
-      // Check if user is authorized team member
       const teamMember = teamMembers.find(member => member.email === userEmail);
       
       if (teamMember) {
@@ -1281,7 +1245,6 @@ export default function Home() {
     setUserEmail('');
   };
 
-  // Appointment Management
   const openModal = (type) => {
     setModalType(type);
     setShowModal(true);
@@ -1304,8 +1267,7 @@ export default function Home() {
       status: 'scheduled',
       meetingLink: `https://meet.google.com/${Math.random().toString(36).substring(7)}`,
       notes: formData.notes || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toISOString()
     };
 
     setAppointments([...appointments, newAppointment]);
@@ -1331,8 +1293,7 @@ export default function Home() {
       assignedTherapist: parseInt(formData.assignedTherapist),
       consentForms: [],
       clinicalNotes: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: new Date().toISOString()
     };
 
     setClients([...clients, newClient]);
@@ -1387,7 +1348,6 @@ export default function Home() {
             HIPAA-Compliant Practice Management System
           </p>
 
-          {/* Google SSO Login */}
           <button
             onClick={handleGoogleSSO}
             style={{
@@ -1422,7 +1382,6 @@ export default function Home() {
             Or use demo accounts for testing:
           </div>
 
-          {/* Demo Logins */}
           <div style={{ marginBottom: '1rem' }}>
             <button
               onClick={() => handleDemoLogin('therapist', 'Dr. Rebecca B. Headley', 'rebecca@rbhpractice.com')}
@@ -1483,7 +1442,6 @@ export default function Home() {
       backgroundColor: '#f8fafc',
       fontFamily: 'Cambria, serif'
     }}>
-      {/* HIPAA-Compliant Header */}
       <header style={{
         backgroundColor: '#4f46e5',
         color: 'white',
@@ -1521,7 +1479,6 @@ export default function Home() {
       </header>
 
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 80px)' }}>
-        {/* Sidebar */}
         <div style={{
           width: '280px',
           backgroundColor: '#1e293b',
@@ -1560,7 +1517,6 @@ export default function Home() {
           </nav>
         </div>
 
-        {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem' }}>
           {activeTab === 'dashboard' && (
             <div>
@@ -1568,7 +1524,6 @@ export default function Home() {
                 Dashboard
               </h2>
               
-              {/* HIPAA Status */}
               <div style={{
                 backgroundColor: 'white',
                 padding: '2rem',
@@ -1600,7 +1555,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Quick Stats */}
               <div style={{ 
                 display: 'grid', 
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -1692,10 +1646,7 @@ export default function Home() {
                 )}
               </div>
 
-              <div style={{ 
-                display: 'grid', 
-                gap: '1rem'
-              }}>
+              <div style={{ display: 'grid', gap: '1rem' }}>
                 {appointments.map((appointment) => (
                   <div key={appointment.id} style={{
                     backgroundColor: 'white',
@@ -1740,7 +1691,7 @@ export default function Home() {
                         🎥 Start Video Session
                       </button>
                       <button
-                        onClick={() => openModal('reschedule')}
+                        onClick={() => alert('Reschedule feature coming soon!')}
                         style={{
                           padding: '0.5rem 1rem',
                           backgroundColor: '#f59e0b',
@@ -1792,10 +1743,7 @@ export default function Home() {
                 )}
               </div>
 
-              <div style={{ 
-                display: 'grid', 
-                gap: '1rem'
-              }}>
+              <div style={{ display: 'grid', gap: '1rem' }}>
                 {clients.map((client) => (
                   <div key={client.id} style={{
                     backgroundColor: 'white',
@@ -1829,7 +1777,7 @@ export default function Home() {
                       {userType === 'therapist' && (
                         <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
                           <button
-                            onClick={() => openModal('editClient')}
+                            onClick={() => alert('Edit client feature coming soon!')}
                             style={{
                               padding: '0.5rem 1rem',
                               backgroundColor: '#64748b',
@@ -1848,3 +1796,23 @@ export default function Home() {
                               setActiveTab('documents');
                               logAuditEvent('CLIENT_DOCUMENTS_ACCESSED', { clientId: client.id });
                             }}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              backgroundColor: '#4f46e5',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.9rem',
+                              fontFamily: 'Cambria, serif'
+                            }}
+                          >
+                            📋 Documents
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <div style={{ 
+                        display: 'flex
