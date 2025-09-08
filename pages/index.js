@@ -9,9 +9,11 @@ export default function Home() {
   const [modalType, setModalType] = useState('');
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
+  const [debugMessages, setDebugMessages] = useState([]);
 
   // Google Calendar Configuration
   const GOOGLE_CLIENT_ID = '940233544658-gec57taau0pkrlcdd81aqs4ssi1ll9bt.apps.googleusercontent.com';
+  const GOOGLE_API_KEY = 'AIzaSyAkbtz3wkgC1IbWwvfsuf2hYG54GrX0jXk';
   const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar';
 
   const [appointments, setAppointments] = useState([
@@ -37,36 +39,64 @@ export default function Home() {
     }
   ]);
 
-  // Load Google API
+  const addDebugMessage = (message) => {
+    setDebugMessages(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+    console.log('Debug:', message);
+  };
+
+  // Load Google API with better error handling
   useEffect(() => {
     const loadGoogleAPI = () => {
-      if (typeof window !== 'undefined' && !window.gapi) {
+      addDebugMessage('Starting to load Google API...');
+      
+      if (typeof window !== 'undefined') {
+        if (window.gapi) {
+          addDebugMessage('Google API already loaded, initializing...');
+          initializeGapi();
+          return;
+        }
+
         const script = document.createElement('script');
         script.src = 'https://apis.google.com/js/api.js';
         script.onload = () => {
-          window.gapi.load('client:auth2', initializeGapi);
+          addDebugMessage('Google API script loaded, loading client and auth...');
+          window.gapi.load('client:auth2', () => {
+            addDebugMessage('Google client and auth2 loaded, initializing...');
+            initializeGapi();
+          });
+        };
+        script.onerror = () => {
+          addDebugMessage('ERROR: Failed to load Google API script');
         };
         document.body.appendChild(script);
-      } else if (window.gapi) {
-        initializeGapi();
       }
     };
 
     const initializeGapi = async () => {
       try {
+        addDebugMessage('Initializing Google API client...');
+        
         await window.gapi.client.init({
-          apiKey: 'AIzaSyAkbtz3wkgC1IbWwvfsuf2hYG54GrX0jXk',
+          apiKey: GOOGLE_API_KEY,
           clientId: GOOGLE_CLIENT_ID,
           discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
           scope: GOOGLE_SCOPE
         });
 
+        addDebugMessage('Google API client initialized successfully');
+
         const authInstance = window.gapi.auth2.getAuthInstance();
-        if (authInstance.isSignedIn.get()) {
+        if (authInstance && authInstance.isSignedIn.get()) {
+          addDebugMessage('User is already signed in');
+          const user = authInstance.currentUser.get();
+          const accessToken = user.getAuthResponse().access_token;
           setIsGoogleConnected(true);
-          setGoogleAccessToken(authInstance.currentUser.get().getAuthResponse().access_token);
+          setGoogleAccessToken(accessToken);
+        } else {
+          addDebugMessage('User is not signed in');
         }
       } catch (error) {
+        addDebugMessage(`ERROR initializing Google API: ${error.message}`);
         console.error('Error initializing Google API:', error);
       }
     };
@@ -74,44 +104,76 @@ export default function Home() {
     loadGoogleAPI();
   }, []);
 
-  // Real Google Calendar Authentication
+  // Simplified Google Calendar Authentication
   const connectGoogleCalendar = async () => {
     try {
-      if (!window.gapi || !window.gapi.auth2) {
+      addDebugMessage('Starting Google Calendar connection...');
+
+      if (!window.gapi) {
+        addDebugMessage('ERROR: Google API not loaded');
         alert('Google API not loaded. Please refresh and try again.');
+        return;
+      }
+
+      if (!window.gapi.auth2) {
+        addDebugMessage('ERROR: Google Auth2 not loaded');
+        alert('Google Auth not loaded. Please refresh and try again.');
         return;
       }
 
       const authInstance = window.gapi.auth2.getAuthInstance();
       if (!authInstance) {
+        addDebugMessage('ERROR: Auth instance not available');
         alert('Google Auth not initialized. Please refresh and try again.');
         return;
       }
 
-      // Sign in the user
-      const user = await authInstance.signIn();
+      addDebugMessage('Requesting user sign-in...');
       
-      if (user.isSignedIn()) {
+      const user = await authInstance.signIn({
+        scope: GOOGLE_SCOPE
+      });
+
+      addDebugMessage('Sign-in completed, checking if user is signed in...');
+
+      if (user && user.isSignedIn()) {
+        addDebugMessage('User successfully signed in');
         const accessToken = user.getAuthResponse().access_token;
-        setIsGoogleConnected(true);
-        setGoogleAccessToken(accessToken);
-        alert('Google Calendar connected successfully! You can now sync appointments.');
+        
+        if (accessToken) {
+          addDebugMessage('Access token obtained successfully');
+          setIsGoogleConnected(true);
+          setGoogleAccessToken(accessToken);
+          alert('Google Calendar connected successfully!');
+        } else {
+          addDebugMessage('ERROR: No access token received');
+          alert('Failed to get access token. Please try again.');
+        }
       } else {
-        throw new Error('User did not sign in');
+        addDebugMessage('ERROR: User did not sign in or sign-in failed');
+        alert('Sign-in was not completed. Please try again.');
       }
     } catch (error) {
+      addDebugMessage(`ERROR during sign-in: ${error.message}`);
       console.error('Error connecting to Google Calendar:', error);
-      alert('Failed to connect to Google Calendar. Please try again.');
+      alert(`Failed to connect: ${error.message}`);
     }
   };
 
   // Disconnect Google Calendar
   const disconnectGoogleCalendar = () => {
+    addDebugMessage('Disconnecting Google Calendar...');
+    
     if (window.gapi && window.gapi.auth2) {
-      window.gapi.auth2.getAuthInstance().signOut();
+      const authInstance = window.gapi.auth2.getAuthInstance();
+      if (authInstance) {
+        authInstance.signOut();
+      }
     }
+    
     setIsGoogleConnected(false);
     setGoogleAccessToken(null);
+    addDebugMessage('Google Calendar disconnected');
     alert('Google Calendar disconnected.');
   };
 
@@ -123,6 +185,8 @@ export default function Home() {
     }
 
     try {
+      addDebugMessage('Creating Google Calendar event...');
+      
       const event = {
         summary: `${appointment.type} - ${appointment.client}`,
         description: `Appointment with ${appointment.client}`,
@@ -144,8 +208,10 @@ export default function Home() {
         resource: event
       });
 
+      addDebugMessage('Calendar event created successfully');
       return response.result.id;
     } catch (error) {
+      addDebugMessage(`ERROR creating calendar event: ${error.message}`);
       console.error('Error creating calendar event:', error);
       alert('Failed to create calendar event.');
       return null;
@@ -488,6 +554,51 @@ export default function Home() {
                     </p>
                   </div>
                 )}
+
+                {/* Debug Section */}
+                {debugMessages.length > 0 && (
+                  <div style={{
+                    marginTop: '1rem',
+                    backgroundColor: '#f1f5f9',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1'
+                  }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '0.9rem' }}>
+                      🔍 Debug Information:
+                    </h4>
+                    <div style={{
+                      maxHeight: '150px',
+                      overflowY: 'auto',
+                      fontSize: '0.8rem',
+                      fontFamily: 'monospace'
+                    }}>
+                      {debugMessages.slice(-10).map((msg, index) => (
+                        <div key={index} style={{ 
+                          color: msg.includes('ERROR') ? '#dc2626' : '#475569',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {msg}
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setDebugMessages([])}
+                      style={{
+                        marginTop: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#64748b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Clear Debug Log
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Quick Stats */}
@@ -714,420 +825,3 @@ export default function Home() {
                             fontFamily: 'Cambria, serif'
                           }}
                         >
-                          ✏️ Edit Information
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '0.5rem'
-                      }}>
-                        <span style={{ color: '#64748b' }}>Treatment Progress</span>
-                        <span style={{ color: '#1e293b', fontWeight: 'bold' }}>
-                          {client.progress}%
-                        </span>
-                      </div>
-                      <div style={{
-                        width: '100%',
-                        height: '8px',
-                        backgroundColor: '#e2e8f0',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${client.progress}%`,
-                          height: '100%',
-                          backgroundColor: '#4f46e5',
-                          transition: 'width 0.3s ease'
-                        }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '12px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '1.5rem'
-            }}>
-              <h3 style={{ margin: 0, color: '#1e293b' }}>
-                {modalType === 'schedule' && '📅 Schedule New Appointment'}
-                {modalType === 'reschedule' && '📅 Reschedule Appointment'}
-                {modalType === 'addClient' && '👤 Add New Client'}
-                {modalType === 'editClient' && '✏️ Edit Client Information'}
-              </h3>
-              <button
-                onClick={closeModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: '#64748b'
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {(modalType === 'schedule' || modalType === 'reschedule') && (
-              <AppointmentForm 
-                onSubmit={handleScheduleAppointment}
-                clients={clients}
-                isReschedule={modalType === 'reschedule'}
-                existingAppointment={modalType === 'reschedule' ? appointments[0] : null}
-              />
-            )}
-
-            {(modalType === 'addClient' || modalType === 'editClient') && (
-              <ClientForm 
-                onSubmit={handleAddClient}
-                isEdit={modalType === 'editClient'}
-                existingClient={modalType === 'editClient' ? clients[0] : null}
-              />
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Appointment Form Component
-function AppointmentForm({ onSubmit, clients, isReschedule, existingAppointment }) {
-  const [formData, setFormData] = useState({
-    date: existingAppointment?.date || '',
-    time: existingAppointment?.time || '',
-    type: existingAppointment?.type || 'Therapy Session',
-    client: existingAppointment?.client || ''
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.date || !formData.time || !formData.client) {
-      alert('Please fill in all required fields.');
-      return;
-    }
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Client *
-        </label>
-        <select
-          value={formData.client}
-          onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        >
-          <option value="">Select a client...</option>
-          {clients.map((client) => (
-            <option key={client.id} value={client.name}>
-              {client.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Date *
-        </label>
-        <input
-          type="date"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Time *
-        </label>
-        <select
-          value={formData.time}
-          onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        >
-          <option value="">Select time...</option>
-          <option value="9:00 AM">9:00 AM</option>
-          <option value="10:00 AM">10:00 AM</option>
-          <option value="11:00 AM">11:00 AM</option>
-          <option value="12:00 PM">12:00 PM</option>
-          <option value="1:00 PM">1:00 PM</option>
-          <option value="2:00 PM">2:00 PM</option>
-          <option value="3:00 PM">3:00 PM</option>
-          <option value="4:00 PM">4:00 PM</option>
-          <option value="5:00 PM">5:00 PM</option>
-        </select>
-      </div>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Session Type
-        </label>
-        <select
-          value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        >
-          <option value="Initial Consultation">Initial Consultation</option>
-          <option value="Therapy Session">Therapy Session</option>
-          <option value="Follow-up">Follow-up</option>
-          <option value="Assessment">Assessment</option>
-        </select>
-      </div>
-
-      <button
-        type="submit"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#4f46e5',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '1rem',
-          fontFamily: 'Cambria, serif',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        {isReschedule ? '📅 Reschedule Appointment' : '📅 Schedule Appointment'}
-      </button>
-    </form>
-  );
-}
-
-// Client Form Component
-function ClientForm({ onSubmit, isEdit, existingClient }) {
-  const [formData, setFormData] = useState({
-    name: existingClient?.name || '',
-    email: existingClient?.email || '',
-    phone: existingClient?.phone || '',
-    dateOfBirth: existingClient?.dateOfBirth || '',
-    address: existingClient?.address || '',
-    emergencyContact: existingClient?.emergencyContact || '',
-    insurance: existingClient?.insurance || '',
-    notes: existingClient?.notes || ''
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email || !formData.phone) {
-      alert('Please fill in all required fields (Name, Email, Phone).');
-      return;
-    }
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Full Name *
-        </label>
-        <input
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Email Address *
-        </label>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Phone Number *
-        </label>
-        <input
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-          required
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Date of Birth
-        </label>
-        <input
-          type="date"
-          value={formData.dateOfBirth}
-          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Insurance Provider
-        </label>
-        <input
-          type="text"
-          value={formData.insurance}
-          onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
-          placeholder="e.g., Blue Cross Blue Shield"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Clinical Notes
-        </label>
-        <textarea
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Any relevant clinical information..."
-          rows={3}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif',
-            resize: 'vertical'
-          }}
-        />
-      </div>
-
-      <button
-        type="submit"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#059669',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '1rem',
-          fontFamily: 'Cambria, serif',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        {isEdit ? '✏️ Update Client' : '👤 Add Client'}
-      </button>
-    </form>
-  );
-}
