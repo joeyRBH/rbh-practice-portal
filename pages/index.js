@@ -13,8 +13,7 @@ export default function Home() {
   const [scheduleForm, setScheduleForm] = useState({
     client: '',
     date: '',
-    time: '',
-    type: 'Therapy Session'
+    time: ''
   });
 
   const [clientForm, setClientForm] = useState({
@@ -30,10 +29,7 @@ export default function Home() {
       time: '2:00 PM',
       type: 'Therapy Session',
       client: 'Sarah Johnson',
-      therapist: 'Dr. Rebecca B. Headley',
-      location: 'Video Call',
-      duration: '50 minutes',
-      synced: false
+      therapist: 'Dr. Rebecca B. Headley'
     }
   ]);
 
@@ -44,18 +40,16 @@ export default function Home() {
       email: 'sarah@email.com',
       phone: '(555) 123-4567',
       progress: 75,
-      totalSessions: 12,
-      notes: 'Making excellent progress with anxiety management'
+      totalSessions: 12
     }
   ]);
 
-  const connectGoogleCalendar = () => {
-    // For now, just simulate connection
+  const connectGoogle = () => {
     setIsGoogleConnected(true);
-    alert('📅 Google Calendar connected! (Demo mode - real integration working)');
+    alert('📅 Google Calendar connected!');
   };
 
-  const disconnectGoogleCalendar = () => {
+  const disconnectGoogle = () => {
     setIsGoogleConnected(false);
     alert('📅 Google Calendar disconnected');
   };
@@ -78,7 +72,7 @@ export default function Home() {
     setShowModal(false);
     setModalType('');
     setSelectedItem(null);
-    setScheduleForm({ client: '', date: '', time: '', type: 'Therapy Session' });
+    setScheduleForm({ client: '', date: '', time: '' });
     setClientForm({ name: '', email: '', phone: '' });
   };
 
@@ -94,22 +88,14 @@ export default function Home() {
       id: appointments.length + 1,
       date: scheduleForm.date,
       time: scheduleForm.time,
-      type: scheduleForm.type,
+      type: 'Therapy Session',
       client: scheduleForm.client,
-      therapist: 'Dr. Rebecca B. Headley',
-      location: 'Video Call',
-      duration: '50 minutes',
-      synced: isGoogleConnected
+      therapist: 'Dr. Rebecca B. Headley'
     };
 
     setAppointments([...appointments, newAppointment]);
     closeModal();
-    
-    if (isGoogleConnected) {
-      alert('✅ Appointment scheduled and synced to Google Calendar!');
-    } else {
-      alert('✅ Appointment scheduled! Connect Google Calendar for sync.');
-    }
+    alert('✅ Appointment scheduled!');
   };
 
   const handleAddClient = (e) => {
@@ -124,8 +110,7 @@ export default function Home() {
       id: clients.length + 1,
       ...clientForm,
       progress: 0,
-      totalSessions: 0,
-      notes: 'New client'
+      totalSessions: 0
     };
 
     setClients([...clients, newClient]);
@@ -143,24 +128,10 @@ export default function Home() {
     ));
     
     closeModal();
-    alert('✅ Client information updated successfully!');
+    alert('✅ Client updated successfully!');
   };
 
-  const handleCancelAppointment = (appointment) => {
-    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      setAppointments(appointments.filter(apt => apt.id !== appointment.id));
-      if (appointment.synced) {
-        alert('❌ Appointment cancelled and removed from Google Calendar');
-      } else {
-        alert('❌ Appointment cancelled');
-      }
-    }
-  };
-
-  const timeSlots = [
-    '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'
-  ];
+  const timeSlots = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
 
   if (!isLoggedIn) {
     return (
@@ -246,14 +217,14 @@ export default function Home() {
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           {userType === 'therapist' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div>
               {isGoogleConnected ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ color: '#10b981', fontSize: '14px' }}>
                     📅 Google Calendar Connected
                   </span>
                   <button
-                    onClick={disconnectGoogleCalendar}
+                    onClick={disconnectGoogle}
                     style={{
                       padding: '4px 8px',
                       backgroundColor: '#f3f4f6',
@@ -270,7 +241,7 @@ export default function Home() {
                 </div>
               ) : (
                 <button
-                  onClick={connectGoogleCalendar}
+                  onClick={connectGoogle}
                   style={{
                     padding: '6px 12px',
                     backgroundColor: '#4285f4',
@@ -322,7 +293,6 @@ export default function Home() {
               color: activeTab === 'dashboard' ? '#6366f1' : '#6b7280',
               fontSize: '16px',
               cursor: 'pointer',
-              fontWeight: activeTab === 'dashboard' ? '600' : '400',
               fontFamily: 'Cambria, serif'
             }}
           >
@@ -338,7 +308,6 @@ export default function Home() {
               color: activeTab === 'appointments' ? '#6366f1' : '#6b7280',
               fontSize: '16px',
               cursor: 'pointer',
-              fontWeight: activeTab === 'appointments' ? '600' : '400',
               fontFamily: 'Cambria, serif'
             }}
           >
@@ -354,7 +323,6 @@ export default function Home() {
               color: activeTab === 'clients' ? '#6366f1' : '#6b7280',
               fontSize: '16px',
               cursor: 'pointer',
-              fontWeight: activeTab === 'clients' ? '600' : '400',
               fontFamily: 'Cambria, serif'
             }}
           >
@@ -430,7 +398,6 @@ export default function Home() {
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontSize: '16px',
-                      fontWeight: '600',
                       fontFamily: 'Cambria, serif'
                     }}
                   >
@@ -446,7 +413,6 @@ export default function Home() {
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontSize: '16px',
-                      fontWeight: '600',
                       fontFamily: 'Cambria, serif'
                     }}
                   >
@@ -455,7 +421,7 @@ export default function Home() {
                   
                   {!isGoogleConnected && (
                     <button
-                      onClick={connectGoogleCalendar}
+                      onClick={connectGoogle}
                       style={{
                         padding: '12px 20px',
                         backgroundColor: '#4285f4',
@@ -464,7 +430,6 @@ export default function Home() {
                         borderRadius: '8px',
                         cursor: 'pointer',
                         fontSize: '16px',
-                        fontWeight: '600',
                         fontFamily: 'Cambria, serif'
                       }}
                     >
@@ -492,7 +457,6 @@ export default function Home() {
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontSize: '16px',
-                    fontWeight: '600',
                     fontFamily: 'Cambria, serif'
                   }}
                 >
@@ -502,9 +466,7 @@ export default function Home() {
             </div>
             
             <div style={{ display: 'grid', gap: '15px' }}>
-              {appointments
-                .filter(apt => userType === 'therapist' || apt.client === userName)
-                .map(appointment => (
+              {appointments.map(appointment => (
                 <div key={appointment.id} style={{ 
                   backgroundColor: 'white', 
                   padding: '20px', 
@@ -521,50 +483,17 @@ export default function Home() {
                     <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
                       📅 {appointment.date} at {appointment.time}
                     </p>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                    <p style={{ margin: '0', color: '#6b7280' }}>
                       👤 {userType === 'therapist' ? appointment.client : appointment.therapist}
                     </p>
-                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
-                      📍 {appointment.location} • ⏱️ {appointment.duration}
-                    </p>
-                    
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ 
-                        fontSize: '12px',
-                        padding: '2px 6px',
-                        backgroundColor: appointment.synced ? '#dcfce7' : '#fef3c7',
-                        color: appointment.synced ? '#166534' : '#92400e',
-                        borderRadius: '4px'
-                      }}>
-                        {appointment.synced ? '📅 Google Calendar Synced' : '📅 Local Only'}
-                      </span>
-                    </div>
                   </div>
                   
                   <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                    {appointment.location === 'Video Call' && (
-                      <button
-                        onClick={() => openModal('video', appointment)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#059669',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontFamily: 'Cambria, serif'
-                        }}
-                      >
-                        🎥 Join Video Call
-                      </button>
-                    )}
-                    
                     <button
-                      onClick={() => handleCancelAppointment(appointment)}
+                      onClick={() => window.open('https://meet.google.com/new', '_blank')}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#ef4444',
+                        backgroundColor: '#059669',
                         color: 'white',
                         border: 'none',
                         borderRadius: '6px',
@@ -573,7 +502,7 @@ export default function Home() {
                         fontFamily: 'Cambria, serif'
                       }}
                     >
-                      ❌ Cancel
+                      🎥 Start Video Call
                     </button>
                   </div>
                 </div>
@@ -596,7 +525,6 @@ export default function Home() {
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '16px',
-                  fontWeight: '600',
                   fontFamily: 'Cambria, serif'
                 }}
               >
@@ -615,27 +543,16 @@ export default function Home() {
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <div style={{ flex: 1 }}>
+                  <div>
                     <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
                       {client.name}
                     </h3>
                     <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
                       📧 {client.email} • 📞 {client.phone}
                     </p>
-                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
+                    <p style={{ margin: '0', color: '#6b7280' }}>
                       📅 Sessions: {client.totalSessions} • Progress: {client.progress}%
                     </p>
-                    
-                    {client.notes && (
-                      <p style={{ 
-                        margin: '0', 
-                        color: '#6b7280', 
-                        fontStyle: 'italic',
-                        fontSize: '14px'
-                      }}>
-                        💭 {client.notes}
-                      </p>
-                    )}
                   </div>
                   
                   <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
@@ -696,9 +613,7 @@ export default function Home() {
             padding: '30px',
             borderRadius: '12px',
             maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto'
+            width: '90%'
           }}>
             {modalType === 'schedule' && (
               <form onSubmit={handleScheduleSubmit}>
@@ -717,339 +632,7 @@ export default function Home() {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={clientForm.email}
-                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientForm.phone}
-                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#059669', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    ➕ Add Client
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'edit-client' && selectedItem && (
-              <form onSubmit={handleEditClient}>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  ✏️ Edit Client Information
-                </h2>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.name}
-                    onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={clientForm.email}
-                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientForm.phone}
-                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f59e0b', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    ✏️ Update Client
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'video' && selectedItem && (
-              <div>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  🎥 Video Session
-                </h2>
-                
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '20px', 
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#1e40af' }}>Session Details:</h3>
-                  <p style={{ margin: '0 0 5px 0', color: '#374151' }}>
-                    <strong>{selectedItem.type}</strong>
-                  </p>
-                  <p style={{ margin: '0 0 5px 0', color: '#6b7280' }}>
-                    📅 {selectedItem.date} at {selectedItem.time}
-                  </p>
-                  <p style={{ margin: '0 0 5px 0', color: '#6b7280' }}>
-                    👤 {userType === 'therapist' ? selectedItem.client : selectedItem.therapist}
-                  </p>
-                  <p style={{ margin: '0', color: '#6b7280' }}>
-                    ⏱️ Duration: {selectedItem.duration}
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      window.open('https://meet.google.com/new', '_blank'); 
-                      closeModal(); 
-                    }}
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#059669', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    🎥 Start Google Meet
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalType === 'progress' && selectedItem && (
-              <div>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  📊 Progress Tracking - {selectedItem.name}
-                </h2>
-                
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '20px', 
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 15px 0', color: '#1e40af' }}>Overall Progress</h3>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-                      {selectedItem.progress}% Complete
-                    </span>
-                  </div>
-                  <div style={{ 
-                    width: '100%', 
-                    height: '12px', 
-                    backgroundColor: '#e5e7eb', 
-                    borderRadius: '6px',
-                    marginBottom: '15px'
-                  }}>
-                    <div style={{ 
-                      width: `${selectedItem.progress}%`, 
-                      height: '100%', 
-                      backgroundColor: selectedItem.progress > 75 ? '#10b981' : selectedItem.progress > 50 ? '#f59e0b' : '#ef4444',
-                      borderRadius: '6px'
-                    }}></div>
-                  </div>
-                  <p style={{ margin: '0', color: '#6b7280', fontSize: '14px' }}>
-                    Total Sessions: <strong>{selectedItem.totalSessions}</strong>
-                  </p>
-                </div>
-
-                {selectedItem.notes && (
-                  <div style={{ 
-                    marginBottom: '25px', 
-                    padding: '15px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '8px' 
-                  }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#92400e' }}>Recent Notes:</h4>
-                    <p style={{ margin: '0', color: '#92400e', fontSize: '14px' }}>
-                      {selectedItem.notes}
-                    </p>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#6366f1', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    📊 Close Progress View
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #ccc',
                       borderRadius: '6px',
                       fontSize: '16px',
                       fontFamily: 'Cambria, serif'
@@ -1072,12 +655,11 @@ export default function Home() {
                     type="date"
                     value={scheduleForm.date}
                     onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})}
-                    min={new Date().toISOString().split('T')[0]}
                     required
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #ccc',
                       borderRadius: '6px',
                       fontSize: '16px',
                       fontFamily: 'Cambria, serif'
@@ -1096,7 +678,7 @@ export default function Home() {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #ccc',
                       borderRadius: '6px',
                       fontSize: '16px',
                       fontFamily: 'Cambria, serif'
@@ -1121,9 +703,7 @@ export default function Home() {
                       color: '#374151', 
                       border: 'none', 
                       borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
+                      cursor: 'pointer'
                     }}
                   >
                     Cancel
@@ -1136,13 +716,10 @@ export default function Home() {
                       color: 'white', 
                       border: 'none', 
                       borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
+                      cursor: 'pointer'
                     }}
                   >
-                    📅 Schedule Appointment
+                    📅 Schedule
                   </button>
                 </div>
               </form>
@@ -1156,7 +733,223 @@ export default function Home() {
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Full Name *
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={clientForm.name}
+                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={clientForm.phone}
+                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                  <button 
+                    type="button"
+                    onClick={closeModal} 
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#f3f4f6', 
+                      color: '#374151', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#f59e0b', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️ Update
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {modalType === 'progress' && selectedItem && (
+              <div>
+                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
+                  📊 Progress - {selectedItem.name}
+                </h2>
+                
+                <div style={{ 
+                  marginBottom: '25px', 
+                  padding: '20px', 
+                  backgroundColor: '#f0f9ff', 
+                  borderRadius: '8px' 
+                }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
+                      {selectedItem.progress}% Complete
+                    </span>
+                  </div>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '12px', 
+                    backgroundColor: '#e5e7eb', 
+                    borderRadius: '6px',
+                    marginBottom: '15px'
+                  }}>
+                    <div style={{ 
+                      width: selectedItem.progress + '%', 
+                      height: '100%', 
+                      backgroundColor: '#10b981',
+                      borderRadius: '6px'
+                    }}></div>
+                  </div>
+                  <p style={{ margin: '0', color: '#6b7280', fontSize: '14px' }}>
+                    Total Sessions: {selectedItem.totalSessions}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button 
+                    onClick={closeModal} 
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#6366f1', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+} name: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={clientForm.email}
+                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={clientForm.phone}
+                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                  <button 
+                    type="button"
+                    onClick={closeModal} 
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#f3f4f6', 
+                      color: '#374151', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#059669', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ➕ Add Client
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {modalType === 'edit-client' && selectedItem && (
+              <form onSubmit={handleEditClient}>
+                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
+                  ✏️ Edit Client
+                </h2>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Name *
                   </label>
                   <input
                     type="text"
@@ -1164,4 +957,20 @@ export default function Home() {
                     onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
                     required
                     style={{
-                      width: '
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={clientForm.email}
+                    onChange={(e) => setClientForm({...clientForm,
