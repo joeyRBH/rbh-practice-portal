@@ -390,16 +390,15 @@ export default function Home() {
               gap: '20px',
               marginBottom: '30px'
             }}>
-              {/* Stats Cards */}
               <div style={{ 
                 backgroundColor: 'white', 
                 padding: '25px', 
                 borderRadius: '12px', 
                 boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' 
               }}>
-                <h3 style={{ margin: '0 0 10px 0', color: '#6366f1' }}>📅 Today's Appointments</h3>
+                <h3 style={{ margin: '0 0 10px 0', color: '#6366f1' }}>📅 Total Appointments</h3>
                 <p style={{ fontSize: '36px', fontWeight: 'bold', margin: '0', color: '#1f2937' }}>
-                  {appointments.filter(apt => apt.date === new Date().toISOString().split('T')[0]).length}
+                  {appointments.length}
                 </p>
               </div>
 
@@ -446,481 +445,6 @@ export default function Home() {
                       color: 'white',
                       border: 'none',
                       borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    ➕ Schedule New Appointment
-                  </button>
-                  <button
-                    onClick={() => openModal('add-client')}
-                    style={{
-                      padding: '12px 20px',
-                      backgroundColor: '#059669',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600'
-                    }}
-                  >
-                    ➕ Add New Client
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Appointments */}
-        {activeTab === 'appointments' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <h2 style={{ margin: 0, color: '#1f2937' }}>📅 Appointments</h2>
-              {userType === 'therapist' && (
-                <button
-                  onClick={() => openModal('schedule')}
-                  style={{
-                    padding: '12px 20px',
-                    backgroundColor: '#6366f1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    fontWeight: '600'
-                  }}
-                >
-                  ➕ Schedule New Appointment
-                </button>
-              )}
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gap: '15px' 
-            }}>
-              {appointments
-                .filter(apt => userType === 'therapist' || apt.client === userName)
-                .map(appointment => (
-                <div key={appointment.id} style={{ 
-                  backgroundColor: 'white', 
-                  padding: '20px', 
-                  borderRadius: '12px', 
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
-                      {appointment.type}
-                    </h3>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
-                      📅 {appointment.date} at {appointment.time}
-                    </p>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
-                      👤 {userType === 'therapist' ? appointment.client : appointment.therapist}
-                    </p>
-                    <p style={{ margin: '0', color: '#6b7280' }}>
-                      📍 {appointment.location} • ⏱️ {appointment.duration}
-                    </p>
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '10px' }}>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        backgroundColor: appointment.reminderSent ? '#dcfce7' : '#fef3c7',
-                        color: appointment.reminderSent ? '#166534' : '#92400e',
-                        borderRadius: '6px',
-                        fontSize: '12px'
-                      }}>
-                        {appointment.reminderSent ? '✅ Reminder Sent' : '⏰ Reminder Pending'}
-                      </span>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        backgroundColor: appointment.calendarSynced ? '#dbeafe' : '#fee2e2',
-                        color: appointment.calendarSynced ? '#1e40af' : '#dc2626',
-                        borderRadius: '6px',
-                        fontSize: '12px'
-                      }}>
-                        {appointment.calendarSynced ? '📅 Calendar Synced' : '📅 Sync Pending'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                    {appointment.location === 'Video Call' && (
-                      <button
-                        onClick={() => openModal('video', appointment)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#059669',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px'
-                        }}
-                      >
-                        🎥 Join Video Call
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => openModal('reschedule', appointment)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      📅 Reschedule
-                    </button>
-                    
-                    <button
-                      onClick={() => handleCancelAppointment(appointment)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      ❌ Cancel
-                    </button>
-
-                    {userType === 'therapist' && !appointment.reminderSent && (
-                      <button
-                        onClick={() => sendReminder(appointment)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#8b5cf6',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '14px'
-                        }}
-                      >
-                        📧 Send Reminder
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Clients (Therapist Only) */}
-        {activeTab === 'clients' && userType === 'therapist' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <h2 style={{ margin: 0, color: '#1f2937' }}>👥 Clients</h2>
-              <button
-                onClick={() => openModal('add-client')}
-                style={{
-                  padding: '12px 20px',
-                  backgroundColor: '#059669',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: '600'
-                }}
-              >
-                ➕ Add New Client
-              </button>
-            </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gap: '15px' 
-            }}>
-              {clients.map(client => (
-                <div key={client.id} style={{ 
-                  backgroundColor: 'white', 
-                  padding: '20px', 
-                  borderRadius: '12px', 
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
-                      {client.name}
-                    </h3>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
-                      📧 {client.email} • 📞 {client.phone}
-                    </p>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
-                      🏥 {client.insurance}
-                    </p>
-                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
-                      📅 Last Session: {client.lastSession} • Sessions: {client.totalSessions}
-                    </p>
-                    
-                    <div style={{ marginBottom: '8px' }}>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>
-                        Progress: {client.progress}%
-                      </span>
-                      <div style={{ 
-                        width: '200px', 
-                        height: '8px', 
-                        backgroundColor: '#e5e7eb', 
-                        borderRadius: '4px',
-                        marginTop: '4px'
-                      }}>
-                        <div style={{ 
-                          width: `${client.progress}%`, 
-                          height: '100%', 
-                          backgroundColor: client.progress > 75 ? '#10b981' : client.progress > 50 ? '#f59e0b' : '#ef4444',
-                          borderRadius: '4px'
-                        }}></div>
-                      </div>
-                    </div>
-                    
-                    {client.notes && (
-                      <p style={{ 
-                        margin: '0', 
-                        color: '#6b7280', 
-                        fontStyle: 'italic',
-                        fontSize: '14px'
-                      }}>
-                        💭 {client.notes}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                    <button
-                      onClick={() => openModal('progress', client)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#8b5cf6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      📊 View Progress
-                    </button>
-                    
-                    <button
-                      onClick={() => openModal('edit-client', client)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      ✏️ Edit Information
-                    </button>
-                    
-                    <button
-                      onClick={() => openModal('schedule')}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#6366f1',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px'
-                      }}
-                    >
-                      📅 Schedule Session
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '12px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            {/* Schedule Appointment Modal */}
-            {modalType === 'schedule' && (
-              <form onSubmit={handleScheduleSubmit}>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  📅 Schedule New Appointment
-                </h2>
-                
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Time *
-                  </label>
-                  <select
-                    value={scheduleForm.time}
-                    onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  >
-                    <option value="">Select a time</option>
-                    {timeSlots.map(time => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Session Type
-                  </label>
-                  <select
-                    value={scheduleForm.type}
-                    onChange={(e) => setScheduleForm({...scheduleForm, type: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  >
-                    <option value="Initial Consultation">Initial Consultation</option>
-                    <option value="Therapy Session">Therapy Session</option>
-                    <option value="Follow-up Session">Follow-up Session</option>
-                    <option value="Assessment">Assessment</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Duration
-                  </label>
-                  <select
-                    value={scheduleForm.duration}
-                    onChange={(e) => setScheduleForm({...scheduleForm, duration: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  >
-                    <option value="30">30 minutes</option>
-                    <option value="50">50 minutes</option>
-                    <option value="60">60 minutes</option>
-                    <option value="90">90 minutes</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Location
-                  </label>
-                  <select
-                    value={scheduleForm.location}
-                    onChange={(e) => setScheduleForm({...scheduleForm, location: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  >
-                    <option value="Video Call">Video Call</option>
-                    <option value="Office - Room 1">Office - Room 1</option>
-                    <option value="Office - Room 2">Office - Room 2</option>
-                    <option value="Office - Room 3">Office - Room 3</option>
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Notes
-                  </label>
-                  <textarea
-                    value={scheduleForm.notes}
-                    onChange={(e) => setScheduleForm({...scheduleForm, notes: e.target.value})}
-                    placeholder="Optional notes about this appointment..."
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      minHeight: '80px',
-                      resize: 'vertical'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#6366f1', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
                       fontSize: '16px',
                       fontWeight: '600'
                     }}
@@ -1078,7 +602,7 @@ export default function Home() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '25px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                     Phone *
                   </label>
@@ -1093,82 +617,6 @@ export default function Home() {
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
                       fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    value={clientForm.dateOfBirth}
-                    onChange={(e) => setClientForm({...clientForm, dateOfBirth: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Insurance Provider
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.insurance}
-                    onChange={(e) => setClientForm({...clientForm, insurance: e.target.value})}
-                    placeholder="e.g., Blue Cross Blue Shield"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Emergency Contact
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.emergencyContact}
-                    onChange={(e) => setClientForm({...clientForm, emergencyContact: e.target.value})}
-                    placeholder="Name and phone number"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Initial Notes
-                  </label>
-                  <textarea
-                    value={clientForm.notes}
-                    onChange={(e) => setClientForm({...clientForm, notes: e.target.value})}
-                    placeholder="Initial assessment notes..."
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      minHeight: '80px',
-                      resize: 'vertical'
                     }}
                   />
                 </div>
@@ -1253,7 +701,7 @@ export default function Home() {
                   />
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '25px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                     Phone *
                   </label>
@@ -1268,79 +716,6 @@ export default function Home() {
                       border: '1px solid #d1d5db',
                       borderRadius: '6px',
                       fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    value={clientForm.dateOfBirth}
-                    onChange={(e) => setClientForm({...clientForm, dateOfBirth: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Insurance Provider
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.insurance}
-                    onChange={(e) => setClientForm({...clientForm, insurance: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Emergency Contact
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.emergencyContact}
-                    onChange={(e) => setClientForm({...clientForm, emergencyContact: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Notes
-                  </label>
-                  <textarea
-                    value={clientForm.notes}
-                    onChange={(e) => setClientForm({...clientForm, notes: e.target.value})}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      minHeight: '80px',
-                      resize: 'vertical'
                     }}
                   />
                 </div>
@@ -1417,7 +792,7 @@ export default function Home() {
                 }}>
                   <p style={{ margin: '0', fontSize: '14px', color: '#92400e' }}>
                     🔒 <strong>HIPAA Notice:</strong> This video session is encrypted and secure. 
-                    Please ensure you're in a private location before joining.
+                    Please ensure you are in a private location before joining.
                   </p>
                 </div>
 
@@ -1488,8 +863,7 @@ export default function Home() {
                       width: `${selectedItem.progress}%`, 
                       height: '100%', 
                       backgroundColor: selectedItem.progress > 75 ? '#10b981' : selectedItem.progress > 50 ? '#f59e0b' : '#ef4444',
-                      borderRadius: '6px',
-                      transition: 'width 0.3s ease'
+                      borderRadius: '6px'
                     }}></div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -1506,76 +880,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '20px', 
-                  backgroundColor: '#f9fafb', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 15px 0', color: '#374151' }}>Treatment Goals</h3>
-                  
-                  {/* Sample goals with progress */}
-                  <div style={{ marginBottom: '15px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#374151' }}>Anxiety Management</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>85%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '6px', 
-                      backgroundColor: '#e5e7eb', 
-                      borderRadius: '3px'
-                    }}>
-                      <div style={{ 
-                        width: '85%', 
-                        height: '100%', 
-                        backgroundColor: '#10b981',
-                        borderRadius: '3px'
-                      }}></div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '15px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#374151' }}>Sleep Quality</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>70%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '6px', 
-                      backgroundColor: '#e5e7eb', 
-                      borderRadius: '3px'
-                    }}>
-                      <div style={{ 
-                        width: '70%', 
-                        height: '100%', 
-                        backgroundColor: '#f59e0b',
-                        borderRadius: '3px'
-                      }}></div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '14px', color: '#374151' }}>Social Confidence</span>
-                      <span style={{ fontSize: '14px', color: '#6b7280' }}>60%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '6px', 
-                      backgroundColor: '#e5e7eb', 
-                      borderRadius: '3px'
-                    }}>
-                      <div style={{ 
-                        width: '60%', 
-                        height: '100%', 
-                        backgroundColor: '#f59e0b',
-                        borderRadius: '3px'
-                      }}></div>
-                    </div>
-                  </div>
-                </div>
-
                 {selectedItem.notes && (
                   <div style={{ 
                     marginBottom: '25px', 
@@ -1584,6 +888,7 @@ export default function Home() {
                     borderRadius: '8px' 
                   }}>
                     <h4 style={{ margin: '0 0 10px 0', color: '#92400e' }}>Recent Notes:</h4>
+                    <p style={{ margin: '0', color: '#92400e', fontSize: '14px' }}>
                       {selectedItem.notes}
                     </p>
                   </div>
@@ -1613,7 +918,321 @@ export default function Home() {
       )}
     </div>
   );
-}={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+}
+                      fontSize: '16px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    ➕ Schedule New Appointment
+                  </button>
+                  <button
+                    onClick={() => openModal('add-client')}
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    ➕ Add New Client
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Appointments */}
+        {activeTab === 'appointments' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>📅 Appointments</h2>
+              {userType === 'therapist' && (
+                <button
+                  onClick={() => openModal('schedule')}
+                  style={{
+                    padding: '12px 20px',
+                    backgroundColor: '#6366f1',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600'
+                  }}
+                >
+                  ➕ Schedule New Appointment
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {appointments
+                .filter(apt => userType === 'therapist' || apt.client === userName)
+                .map(appointment => (
+                <div key={appointment.id} style={{ 
+                  backgroundColor: 'white', 
+                  padding: '20px', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
+                      {appointment.type}
+                    </h3>
+                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                      📅 {appointment.date} at {appointment.time}
+                    </p>
+                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                      👤 {userType === 'therapist' ? appointment.client : appointment.therapist}
+                    </p>
+                    <p style={{ margin: '0', color: '#6b7280' }}>
+                      📍 {appointment.location} • ⏱️ {appointment.duration}
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                    {appointment.location === 'Video Call' && (
+                      <button
+                        onClick={() => openModal('video', appointment)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#059669',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        🎥 Join Video Call
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => openModal('reschedule', appointment)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      📅 Reschedule
+                    </button>
+                    
+                    <button
+                      onClick={() => handleCancelAppointment(appointment)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ❌ Cancel
+                    </button>
+
+                    {userType === 'therapist' && !appointment.reminderSent && (
+                      <button
+                        onClick={() => sendReminder(appointment)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        📧 Send Reminder
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Clients (Therapist Only) */}
+        {activeTab === 'clients' && userType === 'therapist' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>👥 Clients</h2>
+              <button
+                onClick={() => openModal('add-client')}
+                style={{
+                  padding: '12px 20px',
+                  backgroundColor: '#059669',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}
+              >
+                ➕ Add New Client
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '15px' }}>
+              {clients.map(client => (
+                <div key={client.id} style={{ 
+                  backgroundColor: 'white', 
+                  padding: '20px', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
+                      {client.name}
+                    </h3>
+                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                      📧 {client.email} • 📞 {client.phone}
+                    </p>
+                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                      🏥 {client.insurance}
+                    </p>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
+                      📅 Last Session: {client.lastSession} • Sessions: {client.totalSessions}
+                    </p>
+                    
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>
+                        Progress: {client.progress}%
+                      </span>
+                      <div style={{ 
+                        width: '200px', 
+                        height: '8px', 
+                        backgroundColor: '#e5e7eb', 
+                        borderRadius: '4px',
+                        marginTop: '4px'
+                      }}>
+                        <div style={{ 
+                          width: `${client.progress}%`, 
+                          height: '100%', 
+                          backgroundColor: client.progress > 75 ? '#10b981' : client.progress > 50 ? '#f59e0b' : '#ef4444',
+                          borderRadius: '4px'
+                        }}></div>
+                      </div>
+                    </div>
+                    
+                    {client.notes && (
+                      <p style={{ 
+                        margin: '0', 
+                        color: '#6b7280', 
+                        fontStyle: 'italic',
+                        fontSize: '14px'
+                      }}>
+                        💭 {client.notes}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                    <button
+                      onClick={() => openModal('progress', client)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#8b5cf6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      📊 View Progress
+                    </button>
+                    
+                    <button
+                      onClick={() => openModal('edit-client', client)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ✏️ Edit Information
+                    </button>
+                    
+                    <button
+                      onClick={() => openModal('schedule')}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#6366f1',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      📅 Schedule Session
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            {/* Schedule Appointment Modal */}
+            {modalType === 'schedule' && (
+              <form onSubmit={handleScheduleSubmit}>
+                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
+                  📅 Schedule New Appointment
+                </h2>
+                
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                     Client *
                   </label>
                   <select
@@ -1658,4 +1277,52 @@ export default function Home() {
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
-                  <label style
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                    Time *
+                  </label>
+                  <select
+                    value={scheduleForm.time}
+                    onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <option value="">Select a time</option>
+                    {timeSlots.map(time => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                  <button 
+                    type="button"
+                    onClick={closeModal} 
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#f3f4f6', 
+                      color: '#374151', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    style={{
+                      padding: '12px 24px', 
+                      backgroundColor: '#6366f1', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '8px', 
+                      cursor: 'pointer',
