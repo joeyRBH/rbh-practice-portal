@@ -171,8 +171,8 @@ export default function Home() {
         reminders: {
           useDefault: false,
           overrides: [
-            { method: 'email', minutes: 24 * 60 }, // 24 hours
-            { method: 'popup', minutes: 30 }       // 30 minutes
+            { method: 'email', minutes: 24 * 60 },
+            { method: 'popup', minutes: 30 }
           ]
         }
       };
@@ -318,7 +318,6 @@ export default function Home() {
 
   const handleCancelAppointment = async (appointment) => {
     if (window.confirm('Are you sure you want to cancel this appointment?')) {
-      // Delete from Google Calendar if it exists
       if (appointment.googleEventId) {
         await deleteGoogleCalendarEvent(appointment.googleEventId);
       }
@@ -416,7 +415,6 @@ export default function Home() {
           RBH Practice Portal
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* Google Calendar Status */}
           {userType === 'therapist' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {isGoogleAuthed ? (
@@ -703,7 +701,6 @@ export default function Home() {
                       📍 {appointment.location} • ⏱️ {appointment.duration}
                     </p>
                     
-                    {/* Google Calendar Status */}
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <span style={{ 
                         fontSize: '12px',
@@ -808,4 +805,21 @@ export default function Home() {
                   alignItems: 'center'
                 }}>
                   <div style={{ flex: 1 }}>
-                    <h3
+                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
+                      {client.name}
+                    </h3>
+                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
+                      📧 {client.email} • 📞 {client.phone}
+                    </p>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
+                      📅 Sessions: {client.totalSessions} • Progress: {client.progress}%
+                    </p>
+                    
+                    {client.notes && (
+                      <p style={{ 
+                        margin: '0', 
+                        color: '#6b7280', 
+                        fontStyle: 'italic',
+                        fontSize: '14px'
+                      }}>
+                        💭 {client.notes}
