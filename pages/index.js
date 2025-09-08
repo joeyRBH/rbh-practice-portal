@@ -1,41 +1,4 @@
-<div>
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '0.5rem'
-                      }}>
-                        <span style={{ color: '#64748b' }}>Treatment Progress</span>
-                        <span style={{ color: '#1e293b', fontWeight: 'bold' }}>
-                          {client.progress}%
-                        </span>
-                      </div>
-                      <div style={{
-                        width: '100%',
-                        height: '8px',
-                        backgroundColor: '#e2e8f0',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${client.progress}%`,
-                          height: '100%',
-                          backgroundColor: '#4f46e5',
-                          transition: 'width 0.3s ease'
-                        }} />
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>
-                        Consent Forms Status:
-                      </div>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        {clinicalDocuments.filter(doc => doc.required).map(doc => (
-                          <span key={doc.id} style={{
-                            fontSize: '0.8rem',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
+borderRadius: '4px',
                             backgroundColor: client.consentForms.includes(doc.type) ? '#dcfce7' : '#fee2e2',
                             color: client.consentForms.includes(doc.type) ? '#166534' : '#991b1b'
                           }}>
@@ -87,7 +50,7 @@
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
-                          onClick={() => openModal(`document-${doc.id}`)}
+                          onClick={() => openModal('document-' + doc.id)}
                           style={{
                             padding: '0.5rem 1rem',
                             backgroundColor: '#4f46e5',
@@ -163,7 +126,7 @@
                           overflow: 'hidden'
                         }}>
                           <div style={{
-                            width: `${completionRate}%`,
+                            width: completionRate + '%',
                             height: '100%',
                             backgroundColor: completionRate > 70 ? '#059669' : completionRate > 40 ? '#f59e0b' : '#dc2626',
                             transition: 'width 0.3s ease'
@@ -331,22 +294,15 @@
             </div>
 
             {modalType === 'schedule' && (
-              <AppointmentForm 
-                onSubmit={handleScheduleAppointment}
-                clients={clients}
-                teamMembers={teamMembers}
-              />
+              <SimpleAppointmentForm onSubmit={handleScheduleAppointment} clients={clients} teamMembers={teamMembers} />
             )}
 
             {modalType === 'addClient' && (
-              <ClientForm 
-                onSubmit={handleAddClient}
-                teamMembers={teamMembers}
-              />
+              <SimpleClientForm onSubmit={handleAddClient} teamMembers={teamMembers} />
             )}
 
             {modalType.startsWith('document-') && (
-              <DocumentForm 
+              <SimpleDocumentForm 
                 document={clinicalDocuments.find(d => d.id === parseInt(modalType.split('-')[1]))}
                 onSubmit={(formData) => {
                   logAuditEvent('DOCUMENT_COMPLETED', { 
@@ -365,8 +321,7 @@
   );
 }
 
-// Appointment Form Component
-function AppointmentForm({ onSubmit, clients, teamMembers }) {
+function SimpleAppointmentForm({ onSubmit, clients, teamMembers }) {
   const [formData, setFormData] = useState({
     date: '',
     time: '',
@@ -516,283 +471,8 @@ function AppointmentForm({ onSubmit, clients, teamMembers }) {
         </select>
       </div>
 
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Session Notes
-        </label>
-        <textarea
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Any specific notes for this appointment..."
-          rows={3}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif',
-            resize: 'vertical'
-          }}
-        />
-      </div>
-
       <button
         type="submit"
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: '#059669',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '1rem',
-          fontFamily: 'Cambria, serif',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        👤 Add Client
-      </button>
-    </form>
-  );
-}
-
-// Clinical Document Form Component
-function DocumentForm({ document, onSubmit }) {
-  const [formData, setFormData] = useState({});
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    const requiredFields = document.fields.filter(field => field.required);
-    const missingFields = requiredFields.filter(field => !formData[field.name]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in required fields: ${missingFields.map(f => f.label).join(', ')}`);
-      return;
-    }
-
-    onSubmit({
-      documentId: document.id,
-      documentType: document.type,
-      responses: formData,
-      completedAt: new Date().toISOString()
-    });
-  };
-
-  const handleFieldChange = (fieldName, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-  };
-
-  const renderField = (field) => {
-    const commonStyle = {
-      width: '100%',
-      padding: '0.75rem',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '1rem',
-      fontFamily: 'Cambria, serif'
-    };
-
-    switch (field.type) {
-      case 'text':
-        return (
-          <input
-            type="text"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            placeholder={field.placeholder || ''}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'email':
-        return (
-          <input
-            type="email"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'date':
-        return (
-          <input
-            type="date"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            placeholder={field.placeholder || ''}
-            rows={4}
-            style={{
-              ...commonStyle,
-              resize: 'vertical'
-            }}
-            required={field.required}
-          />
-        );
-
-      case 'select':
-        return (
-          <select
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          >
-            <option value="">Select an option...</option>
-            {field.options.map((option, index) => (
-              <option key={index} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-
-      case 'checkbox':
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
-            {field.options.map((option, index) => (
-              <label key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input
-                  type="checkbox"
-                  checked={(formData[field.name] || []).includes(option)}
-                  onChange={(e) => {
-                    const currentValues = formData[field.name] || [];
-                    const newValues = e.target.checked
-                      ? [...currentValues, option]
-                      : currentValues.filter(v => v !== option);
-                    handleFieldChange(field.name, newValues);
-                  }}
-                  style={{ margin: 0 }}
-                />
-                <span style={{ fontSize: '0.9rem' }}>{option}</span>
-              </label>
-            ))}
-          </div>
-        );
-
-      case 'range':
-        return (
-          <div>
-            <input
-              type="range"
-              min={field.min || 0}
-              max={field.max || 100}
-              value={formData[field.name] || field.min || 0}
-              onChange={(e) => handleFieldChange(field.name, e.target.value)}
-              style={{ width: '100%' }}
-            />
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>
-              Value: {formData[field.name] || field.min || 0}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <input
-            type="text"
-            value={formData[field.name] || ''}
-            onChange={(e) => handleFieldChange(field.name, e.target.value)}
-            style={commonStyle}
-            required={field.required}
-          />
-        );
-    }
-  };
-
-  return (
-    <div>
-      <div style={{
-        marginBottom: '2rem',
-        padding: '1rem',
-        backgroundColor: '#f8fafc',
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{document.name}</h4>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
-          Please complete all required fields marked with an asterisk (*).
-        </p>
-        {document.content && (
-          <div style={{ 
-            marginTop: '1rem', 
-            padding: '1rem', 
-            backgroundColor: 'white', 
-            borderRadius: '6px',
-            fontSize: '0.9rem',
-            color: '#64748b'
-          }}>
-            {document.content}
-          </div>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        {document.fields.map((field, index) => (
-          <div key={index} style={{ marginBottom: '1.5rem' }}>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '0.5rem', 
-              color: '#374151', 
-              fontWeight: 'bold' 
-            }}>
-              {field.label}
-              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
-            </label>
-            {renderField(field)}
-          </div>
-        ))}
-
-        <div style={{
-          marginTop: '2rem',
-          padding: '1rem',
-          backgroundColor: '#fef3c7',
-          borderRadius: '8px',
-          border: '1px solid #f59e0b',
-          marginBottom: '1.5rem'
-        }}>
-          <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
-            🔒 <strong>HIPAA Notice:</strong> This information is protected health information and will be stored securely in compliance with HIPAA regulations. Your data is encrypted and access is logged for security purposes.
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            backgroundColor: '#4f46e5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          📝 Complete Document
-        </button>
-      </form>
-    </div>
-  );
-}
         style={{
           width: '100%',
           padding: '0.75rem',
@@ -812,8 +492,7 @@ function DocumentForm({ document, onSubmit }) {
   );
 }
 
-// Client Form Component
-function ClientForm({ onSubmit, teamMembers }) {
+function SimpleClientForm({ onSubmit, teamMembers }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -924,32 +603,13 @@ function ClientForm({ onSubmit, teamMembers }) {
 
       <div style={{ marginBottom: '1rem' }}>
         <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Date of Birth
-        </label>
-        <input
-          type="date"
-          value={formData.dateOfBirth}
-          onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Address
+          Insurance Provider
         </label>
         <input
           type="text"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          placeholder="Street, City, State, ZIP"
+          value={formData.insurance}
+          onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
+          placeholder="e.g., Blue Cross Blue Shield"
           style={{
             width: '100%',
             padding: '0.75rem',
@@ -959,97 +619,199 @@ function ClientForm({ onSubmit, teamMembers }) {
             fontFamily: 'Cambria, serif'
           }}
         />
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Emergency Contact
-        </label>
-        <input
-          type="text"
-          value={formData.emergencyContact}
-          onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-          placeholder="Name - Phone Number"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-            Insurance Provider
-          </label>
-          <input
-            type="text"
-            value={formData.insurance}
-            onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
-            placeholder="e.g., Blue Cross Blue Shield"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontFamily: 'Cambria, serif'
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-            Insurance ID
-          </label>
-          <input
-            type="text"
-            value={formData.insuranceId}
-            onChange={(e) => setFormData({ ...formData, insuranceId: e.target.value })}
-            placeholder="Insurance ID Number"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontFamily: 'Cambria, serif'
-            }}
-          />
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: 'bold' }}>
-          Assigned Therapist
-        </label>
-        <select
-          value={formData.assignedTherapist}
-          onChange={(e) => setFormData({ ...formData, assignedTherapist: e.target.value })}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            border: '2px solid #e5e7eb',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontFamily: 'Cambria, serif'
-          }}
-        >
-          <option value="">Select a therapist...</option>
-          {teamMembers.filter(member => member.role === 'therapist').map((therapist) => (
-            <option key={therapist.id} value={therapist.id}>
-              {therapist.name} - {therapist.specialties.join(', ')}
-            </option>
-          ))}
-        </select>
       </div>
 
       <button
-        type="submit"import { useState, useEffect } from 'react';
+        type="submit"
+        style={{
+          width: '100%',
+          padding: '0.75rem',
+          backgroundColor: '#059669',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '1rem',
+          fontFamily: 'Cambria, serif',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
+      >
+        👤 Add Client
+      </button>
+    </form>
+  );
+}
+
+function SimpleDocumentForm({ document, onSubmit }) {
+  const [formData, setFormData] = useState({});
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    const requiredFields = document.fields.filter(field => field.required);
+    const missingFields = requiredFields.filter(field => !formData[field.name]);
+    
+    if (missingFields.length > 0) {
+      alert('Please fill in required fields: ' + missingFields.map(f => f.label).join(', '));
+      return;
+    }
+
+    onSubmit({
+      documentId: document.id,
+      documentType: document.type,
+      responses: formData,
+      completedAt: new Date().toISOString()
+    });
+  };
+
+  const handleFieldChange = (fieldName, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+  };
+
+  return (
+    <div>
+      <div style={{
+        marginBottom: '2rem',
+        padding: '1rem',
+        backgroundColor: '#f8fafc',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>{document.name}</h4>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>
+          Please complete all required fields marked with an asterisk (*).
+        </p>
+        {document.content && (
+          <div style={{ 
+            marginTop: '1rem', 
+            padding: '1rem', 
+            backgroundColor: 'white', 
+            borderRadius: '6px',
+            fontSize: '0.9rem',
+            color: '#64748b'
+          }}>
+            {document.content}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        {document.fields.map((field, index) => (
+          <div key={index} style={{ marginBottom: '1.5rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem', 
+              color: '#374151', 
+              fontWeight: 'bold' 
+            }}>
+              {field.label}
+              {field.required && <span style={{ color: '#dc2626' }}> *</span>}
+            </label>
+            {field.type === 'textarea' && (
+              <textarea
+                value={formData[field.name] || ''}
+                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                rows={4}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontFamily: 'Cambria, serif',
+                  resize: 'vertical'
+                }}
+                required={field.required}
+              />
+            )}
+            {field.type === 'text' && (
+              <input
+                type="text"
+                value={formData[field.name] || ''}
+                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontFamily: 'Cambria, serif'
+                }}
+                required={field.required}
+              />
+            )}
+            {field.type === 'date' && (
+              <input
+                type="date"
+                value={formData[field.name] || ''}
+                onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontFamily: 'Cambria, serif'
+                }}
+                required={field.required}
+              />
+            )}
+            {field.type === 'checkbox' && field.options && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                {field.options.map((option, optionIndex) => (
+                  <label key={optionIndex} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={(formData[field.name] || []).includes(option)}
+                      onChange={(e) => {
+                        const currentValues = formData[field.name] || [];
+                        const newValues = e.target.checked
+                          ? [...currentValues, option]
+                          : currentValues.filter(v => v !== option);
+                        handleFieldChange(field.name, newValues);
+                      }}
+                      style={{ margin: 0 }}
+                    />
+                    <span style={{ fontSize: '0.9rem' }}>{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        <div style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          backgroundColor: '#fef3c7',
+          borderRadius: '8px',
+          border: '1px solid #f59e0b',
+          marginBottom: '1.5rem'
+        }}>
+          <p style={{ margin: 0, color: '#92400e', fontSize: '0.9rem' }}>
+            🔒 <strong>HIPAA Notice:</strong> This information is protected health information and will be stored securely in compliance with HIPAA regulations.
+          </p>
+        </div>
+
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: '#4f46e5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontFamily: 'Cambria, serif',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -1061,10 +823,8 @@ export default function Home() {
   const [modalType, setModalType] = useState('');
   const [auditLog, setAuditLog] = useState([]);
 
-  // Google SSO Configuration
   const GOOGLE_CLIENT_ID = '940233544658-gec57taau0pkrlcdd81aqs4ssi1ll9bt.apps.googleusercontent.com';
 
-  // HIPAA-Compliant Data Storage
   const [appointments, setAppointments] = useState([
     {
       id: 1,
@@ -1075,8 +835,7 @@ export default function Home() {
       therapistId: 1,
       status: 'scheduled',
       meetingLink: 'https://meet.google.com/abc-defg-hij',
-      notes: '',
-      createdAt: new Date().toISOString()
+      notes: ''
     }
   ]);
 
@@ -1095,9 +854,7 @@ export default function Home() {
       progress: 75,
       totalSessions: 12,
       assignedTherapist: 1,
-      consentForms: ['intake', 'privacy'],
-      clinicalNotes: [],
-      createdAt: new Date().toISOString()
+      consentForms: ['intake', 'privacy']
     }
   ]);
 
@@ -1129,8 +886,6 @@ export default function Home() {
       fields: [
         { name: 'chiefComplaint', label: 'Chief Complaint', type: 'textarea', required: true },
         { name: 'symptoms', label: 'Current Symptoms', type: 'checkbox', options: ['Anxiety', 'Depression', 'Sleep Issues', 'Relationship Problems'] },
-        { name: 'previousTreatment', label: 'Previous Treatment', type: 'textarea' },
-        { name: 'medications', label: 'Current Medications', type: 'textarea' },
         { name: 'goals', label: 'Treatment Goals', type: 'textarea', required: true }
       ]
     },
@@ -1145,37 +900,21 @@ export default function Home() {
         { name: 'signature', label: 'Digital Signature', type: 'text', required: true },
         { name: 'date', label: 'Date', type: 'date', required: true }
       ]
-    },
-    {
-      id: 3,
-      name: 'Progress Assessment',
-      type: 'progress',
-      required: false,
-      fields: [
-        { name: 'moodRating', label: 'Mood Rating (1-10)', type: 'range', min: 1, max: 10 },
-        { name: 'anxietyLevel', label: 'Anxiety Level (1-10)', type: 'range', min: 1, max: 10 },
-        { name: 'sleepQuality', label: 'Sleep Quality', type: 'select', options: ['Poor', 'Fair', 'Good', 'Excellent'] },
-        { name: 'notes', label: 'Additional Notes', type: 'textarea' }
-      ]
     }
   ]);
 
-  // HIPAA Audit Logging
   const logAuditEvent = (action, details) => {
     const auditEntry = {
       timestamp: new Date().toISOString(),
       user: userName,
       userEmail: userEmail,
       action: action,
-      details: details,
-      ipAddress: 'xxx.xxx.xxx.xxx',
-      sessionId: 'session_' + Math.random().toString(36)
+      details: details
     };
     setAuditLog(prev => [...prev, auditEntry]);
     console.log('HIPAA Audit:', auditEntry);
   };
 
-  // Google SSO Integration
   useEffect(() => {
     loadGoogleSSO();
   }, []);
@@ -1265,9 +1004,8 @@ export default function Home() {
       clientId: parseInt(formData.clientId),
       therapistId: teamMembers.find(t => t.name === formData.therapist)?.id || 1,
       status: 'scheduled',
-      meetingLink: `https://meet.google.com/${Math.random().toString(36).substring(7)}`,
-      notes: formData.notes || '',
-      createdAt: new Date().toISOString()
+      meetingLink: 'https://meet.google.com/' + Math.random().toString(36).substring(7),
+      notes: formData.notes || ''
     };
 
     setAppointments([...appointments, newAppointment]);
@@ -1291,20 +1029,18 @@ export default function Home() {
       progress: 0,
       totalSessions: 0,
       assignedTherapist: parseInt(formData.assignedTherapist),
-      consentForms: [],
-      clinicalNotes: [],
-      createdAt: new Date().toISOString()
+      consentForms: []
     };
 
     setClients([...clients, newClient]);
-    logAuditEvent('CLIENT_CREATED', { clientId: newClient.id, clientName: `${newClient.firstName} ${newClient.lastName}` });
+    logAuditEvent('CLIENT_CREATED', { clientId: newClient.id, clientName: formData.firstName + ' ' + formData.lastName });
     closeModal();
     alert('Client added successfully!');
   };
 
   const getClientName = (clientId) => {
     const client = clients.find(c => c.id === clientId);
-    return client ? `${client.firstName} ${client.lastName}` : 'Unknown Client';
+    return client ? client.firstName + ' ' + client.lastName : 'Unknown Client';
   };
 
   const getTherapistName = (therapistId) => {
@@ -1361,11 +1097,7 @@ export default function Home() {
               cursor: 'pointer',
               marginBottom: '1rem',
               fontFamily: 'Cambria, serif',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem'
+              fontWeight: 'bold'
             }}
           >
             🔐 Sign in with Google (Team Members)
@@ -1815,4 +1547,38 @@ export default function Home() {
                     
                     <div>
                       <div style={{ 
-                        display: 'flex
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <span style={{ color: '#64748b' }}>Treatment Progress</span>
+                        <span style={{ color: '#1e293b', fontWeight: 'bold' }}>
+                          {client.progress}%
+                        </span>
+                      </div>
+                      <div style={{
+                        width: '100%',
+                        height: '8px',
+                        backgroundColor: '#e2e8f0',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: client.progress + '%',
+                          height: '100%',
+                          backgroundColor: '#4f46e5',
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#1e293b' }}>
+                        Consent Forms Status:
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {clinicalDocuments.filter(doc => doc.required).map(doc => (
+                          <span key={doc.id} style={{
+                            fontSize: '0.8rem',
+                            padding: '0.25rem 0.5rem',
