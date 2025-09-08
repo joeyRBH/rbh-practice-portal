@@ -40,29 +40,35 @@ export default function Home() {
   // Load Google API
   useEffect(() => {
     const loadGoogleAPI = () => {
-      if (typeof window !== 'undefined' && !window.google) {
+      if (typeof window !== 'undefined' && !window.gapi) {
         const script = document.createElement('script');
         script.src = 'https://apis.google.com/js/api.js';
         script.onload = () => {
           window.gapi.load('client:auth2', initializeGapi);
         };
         document.body.appendChild(script);
-      } else if (window.google) {
+      } else if (window.gapi) {
         initializeGapi();
       }
     };
 
-    const initializeGapi = () => {
-      window.gapi.client.init({
-        clientId: GOOGLE_CLIENT_ID,
-        scope: GOOGLE_SCOPE
-      }).then(() => {
+    const initializeGapi = async () => {
+      try {
+        await window.gapi.client.init({
+          apiKey: 'AIzaSyAkbtz3wkgC1IbWwvfsuf2hYG54GrX0jXk',
+          clientId: GOOGLE_CLIENT_ID,
+          discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
+          scope: GOOGLE_SCOPE
+        });
+
         const authInstance = window.gapi.auth2.getAuthInstance();
         if (authInstance.isSignedIn.get()) {
           setIsGoogleConnected(true);
           setGoogleAccessToken(authInstance.currentUser.get().getAuthResponse().access_token);
         }
-      });
+      } catch (error) {
+        console.error('Error initializing Google API:', error);
+      }
     };
 
     loadGoogleAPI();
@@ -71,22 +77,28 @@ export default function Home() {
   // Real Google Calendar Authentication
   const connectGoogleCalendar = async () => {
     try {
-      if (!window.gapi) {
+      if (!window.gapi || !window.gapi.auth2) {
         alert('Google API not loaded. Please refresh and try again.');
         return;
       }
 
       const authInstance = window.gapi.auth2.getAuthInstance();
-      const user = await authInstance.signIn();
-      const accessToken = user.getAuthResponse().access_token;
+      if (!authInstance) {
+        alert('Google Auth not initialized. Please refresh and try again.');
+        return;
+      }
 
-      setIsGoogleConnected(true);
-      setGoogleAccessToken(accessToken);
+      // Sign in the user
+      const user = await authInstance.signIn();
       
-      // Load the Calendar API
-      await window.gapi.client.load('calendar', 'v3');
-      
-      alert('Google Calendar connected successfully! You can now sync appointments.');
+      if (user.isSignedIn()) {
+        const accessToken = user.getAuthResponse().access_token;
+        setIsGoogleConnected(true);
+        setGoogleAccessToken(accessToken);
+        alert('Google Calendar connected successfully! You can now sync appointments.');
+      } else {
+        throw new Error('User did not sign in');
+      }
     } catch (error) {
       console.error('Error connecting to Google Calendar:', error);
       alert('Failed to connect to Google Calendar. Please try again.');
