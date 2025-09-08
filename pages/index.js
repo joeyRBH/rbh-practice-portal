@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -8,13 +8,20 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
   const [selectedItem, setSelectedItem] = useState(null);
+  
+  // Google Calendar states
+  const [isGoogleAuthed, setIsGoogleAuthed] = useState(false);
+  const [gapi, setGapi] = useState(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
 
   // Form states
   const [scheduleForm, setScheduleForm] = useState({
     client: '',
     date: '',
     time: '',
-    type: 'Therapy Session'
+    type: 'Therapy Session',
+    duration: '50',
+    location: 'Video Call'
   });
 
   const [clientForm, setClientForm] = useState({
@@ -32,7 +39,8 @@ export default function Home() {
       client: 'Sarah Johnson',
       therapist: 'Dr. Rebecca B. Headley',
       location: 'Video Call',
-      duration: '50 minutes'
+      duration: '50 minutes',
+      googleEventId: null
     },
     {
       id: 2,
@@ -42,7 +50,8 @@ export default function Home() {
       client: 'Sarah Johnson',
       therapist: 'Dr. Rebecca B. Headley',
       location: 'Office - Room 2',
-      duration: '50 minutes'
+      duration: '50 minutes',
+      googleEventId: null
     }
   ]);
 
@@ -67,6 +76,149 @@ export default function Home() {
     }
   ]);
 
+  // Google Calendar Configuration
+  const GOOGLE_CONFIG = {
+    apiKey: 'AIzaSyAkbtz3wkgC1IbWwvfsuf2hYG54GrX0jXk',
+    clientId: '940233544658-37dhd1k6cdfgu9akmltbiflvr3uv2dt3.apps.googleusercontent.com',
+    discoveryDoc: 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
+    scopes: 'https://www.googleapis.com/auth/calendar'
+  };
+
+  // Initialize Google Calendar API
+  useEffect(() => {
+    const initializeGapi = async () => {
+      if (typeof window !== 'undefined' && window.gapi) {
+        try {
+          await window.gapi.load('client:auth2', initGoogleAPI);
+        } catch (error) {
+          console.log('Google API not available - using fallback mode');
+        }
+      }
+    };
+
+    const initGoogleAPI = async () => {
+      try {
+        await window.gapi.client.init({
+          apiKey: GOOGLE_CONFIG.apiKey,
+          clientId: GOOGLE_CONFIG.clientId,
+          discoveryDocs: [GOOGLE_CONFIG.discoveryDoc],
+          scope: GOOGLE_CONFIG.scopes
+        });
+
+        setGapi(window.gapi);
+        
+        const authInstance = window.gapi.auth2.getAuthInstance();
+        setIsGoogleAuthed(authInstance.isSignedIn.get());
+        
+        authInstance.isSignedIn.listen(setIsGoogleAuthed);
+      } catch (error) {
+        console.log('Google Calendar API initialization failed:', error);
+      }
+    };
+
+    // Load Google API script
+    if (!window.gapi) {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = initializeGapi;
+      document.body.appendChild(script);
+    } else {
+      initializeGapi();
+    }
+  }, []);
+
+  // Google Calendar Functions
+  const signInToGoogle = () => {
+    if (gapi && gapi.auth2) {
+      gapi.auth2.getAuthInstance().signIn();
+    } else {
+      alert('📅 Google Calendar integration will be available once API keys are configured');
+    }
+  };
+
+  const signOutFromGoogle = () => {
+    if (gapi && gapi.auth2) {
+      gapi.auth2.getAuthInstance().signOut();
+    }
+  };
+
+  const createGoogleCalendarEvent = async (appointment) => {
+    if (!gapi || !isGoogleAuthed) {
+      console.log('Google Calendar not available - appointment saved locally only');
+      return null;
+    }
+
+    try {
+      setCalendarLoading(true);
+      
+      const startDateTime = new Date(`${appointment.date}T${convertTo24Hour(appointment.time)}`);
+      const endDateTime = new Date(startDateTime.getTime() + (parseInt(appointment.duration) * 60000));
+
+      const event = {
+        summary: `${appointment.type} - ${appointment.client}`,
+        description: `Therapy session with ${appointment.client}\nType: ${appointment.type}\nLocation: ${appointment.location}`,
+        start: {
+          dateTime: startDateTime.toISOString(),
+          timeZone: 'America/Denver'
+        },
+        end: {
+          dateTime: endDateTime.toISOString(),
+          timeZone: 'America/Denver'
+        },
+        attendees: [
+          { email: getClientEmail(appointment.client) }
+        ],
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'email', minutes: 24 * 60 }, // 24 hours
+            { method: 'popup', minutes: 30 }       // 30 minutes
+          ]
+        }
+      };
+
+      const response = await gapi.client.calendar.events.insert({
+        calendarId: 'primary',
+        resource: event
+      });
+
+      setCalendarLoading(false);
+      return response.result.id;
+    } catch (error) {
+      console.error('Failed to create Google Calendar event:', error);
+      setCalendarLoading(false);
+      return null;
+    }
+  };
+
+  const deleteGoogleCalendarEvent = async (googleEventId) => {
+    if (!gapi || !isGoogleAuthed || !googleEventId) return;
+
+    try {
+      await gapi.client.calendar.events.delete({
+        calendarId: 'primary',
+        eventId: googleEventId
+      });
+    } catch (error) {
+      console.error('Failed to delete Google Calendar event:', error);
+    }
+  };
+
+  // Helper functions
+  const convertTo24Hour = (time12h) => {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+    return `${hours.padStart(2, '0')}:${minutes}:00`;
+  };
+
+  const getClientEmail = (clientName) => {
+    const client = clients.find(c => c.name === clientName);
+    return client ? client.email : '';
+  };
+
+  // Modal handlers
   const openModal = (type, item = null) => {
     setModalType(type);
     setSelectedItem(item);
@@ -85,11 +237,12 @@ export default function Home() {
     setShowModal(false);
     setModalType('');
     setSelectedItem(null);
-    setScheduleForm({ client: '', date: '', time: '', type: 'Therapy Session' });
+    setScheduleForm({ client: '', date: '', time: '', type: 'Therapy Session', duration: '50', location: 'Video Call' });
     setClientForm({ name: '', email: '', phone: '' });
   };
 
-  const handleScheduleSubmit = (e) => {
+  // Form submission handlers
+  const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     
     if (!scheduleForm.client || !scheduleForm.date || !scheduleForm.time) {
@@ -104,13 +257,29 @@ export default function Home() {
       type: scheduleForm.type,
       client: scheduleForm.client,
       therapist: 'Dr. Rebecca B. Headley',
-      location: 'Video Call',
-      duration: '50 minutes'
+      location: scheduleForm.location,
+      duration: scheduleForm.duration + ' minutes',
+      googleEventId: null
     };
+
+    // Create Google Calendar event
+    const googleEventId = await createGoogleCalendarEvent({
+      ...newAppointment,
+      duration: scheduleForm.duration
+    });
+    
+    if (googleEventId) {
+      newAppointment.googleEventId = googleEventId;
+    }
 
     setAppointments([...appointments, newAppointment]);
     closeModal();
-    alert('✅ Appointment scheduled successfully!');
+    
+    if (googleEventId) {
+      alert('✅ Appointment scheduled and added to Google Calendar!');
+    } else {
+      alert('✅ Appointment scheduled locally! (Connect Google Calendar for sync)');
+    }
   };
 
   const handleAddClient = (e) => {
@@ -147,10 +316,15 @@ export default function Home() {
     alert('✅ Client information updated successfully!');
   };
 
-  const handleCancelAppointment = (appointment) => {
+  const handleCancelAppointment = async (appointment) => {
     if (window.confirm('Are you sure you want to cancel this appointment?')) {
+      // Delete from Google Calendar if it exists
+      if (appointment.googleEventId) {
+        await deleteGoogleCalendarEvent(appointment.googleEventId);
+      }
+      
       setAppointments(appointments.filter(apt => apt.id !== appointment.id));
-      alert('❌ Appointment cancelled');
+      alert('❌ Appointment cancelled and removed from Google Calendar');
     }
   };
 
@@ -242,6 +416,50 @@ export default function Home() {
           RBH Practice Portal
         </h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {/* Google Calendar Status */}
+          {userType === 'therapist' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {isGoogleAuthed ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#10b981', fontSize: '14px' }}>
+                    📅 Google Calendar Connected
+                  </span>
+                  <button
+                    onClick={signOutFromGoogle}
+                    style={{
+                      padding: '4px 8px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#6b7280',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={signInToGoogle}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#4285f4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontFamily: 'Cambria, serif'
+                  }}
+                >
+                  📅 Connect Google Calendar
+                </button>
+              )}
+            </div>
+          )}
+          
           <span style={{ color: '#6b7280' }}>Welcome, {userName}</span>
           <button
             onClick={() => setIsLoggedIn(false)}
@@ -351,6 +569,21 @@ export default function Home() {
                   {clients.length}
                 </p>
               </div>
+
+              <div style={{ 
+                backgroundColor: 'white', 
+                padding: '25px', 
+                borderRadius: '12px', 
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' 
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#4285f4' }}>📅 Google Calendar</h3>
+                <p style={{ fontSize: '18px', fontWeight: 'bold', margin: '0', color: '#1f2937' }}>
+                  {isGoogleAuthed ? '✅ Connected' : '❌ Not Connected'}
+                </p>
+                <p style={{ fontSize: '14px', margin: '8px 0 0 0', color: '#6b7280' }}>
+                  {isGoogleAuthed ? 'Appointments sync automatically' : 'Connect for real-time sync'}
+                </p>
+              </div>
             </div>
 
             {userType === 'therapist' && (
@@ -394,6 +627,25 @@ export default function Home() {
                   >
                     ➕ Add New Client
                   </button>
+                  
+                  {!isGoogleAuthed && (
+                    <button
+                      onClick={signInToGoogle}
+                      style={{
+                        padding: '12px 20px',
+                        backgroundColor: '#4285f4',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        fontFamily: 'Cambria, serif'
+                      }}
+                    >
+                      📅 Connect Google Calendar
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -447,9 +699,22 @@ export default function Home() {
                     <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
                       👤 {userType === 'therapist' ? appointment.client : appointment.therapist}
                     </p>
-                    <p style={{ margin: '0', color: '#6b7280' }}>
+                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
                       📍 {appointment.location} • ⏱️ {appointment.duration}
                     </p>
+                    
+                    {/* Google Calendar Status */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ 
+                        fontSize: '12px',
+                        padding: '2px 6px',
+                        backgroundColor: appointment.googleEventId ? '#dcfce7' : '#fef3c7',
+                        color: appointment.googleEventId ? '#166534' : '#92400e',
+                        borderRadius: '4px'
+                      }}>
+                        {appointment.googleEventId ? '📅 Google Calendar Synced' : '📅 Local Only'}
+                      </span>
+                    </div>
                   </div>
                   
                   <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
@@ -543,625 +808,4 @@ export default function Home() {
                   alignItems: 'center'
                 }}>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ margin: '0 0 8px 0', color: '#1f2937' }}>
-                      {client.name}
-                    </h3>
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280' }}>
-                      📧 {client.email} • 📞 {client.phone}
-                    </p>
-                    <p style={{ margin: '0 0 8px 0', color: '#6b7280' }}>
-                      📅 Sessions: {client.totalSessions} • Progress: {client.progress}%
-                    </p>
-                    
-                    {client.notes && (
-                      <p style={{ 
-                        margin: '0', 
-                        color: '#6b7280', 
-                        fontStyle: 'italic',
-                        fontSize: '14px'
-                      }}>
-                        💭 {client.notes}
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                    <button
-                      onClick={() => openModal('progress', client)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#8b5cf6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    >
-                      📊 View Progress
-                    </button>
-                    
-                    <button
-                      onClick={() => openModal('edit-client', client)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    >
-                      ✏️ Edit Information
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '12px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            {modalType === 'schedule' && (
-              <form onSubmit={handleScheduleSubmit}>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  📅 Schedule New Appointment
-                </h2>
-                
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Client *
-                  </label>
-                  <select
-                    value={scheduleForm.client}
-                    onChange={(e) => setScheduleForm({...scheduleForm, client: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    <option value="">Select a client</option>
-                    {clients.map(client => (
-                      <option key={client.id} value={client.name}>
-                        {client.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={scheduleForm.date}
-                    onChange={(e) => setScheduleForm({...scheduleForm, date: e.target.value})}
-                    min={new Date().toISOString().split('T')[0]}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Time *
-                  </label>
-                  <select
-                    value={scheduleForm.time}
-                    onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    <option value="">Select a time</option>
-                    {timeSlots.map(time => (
-                      <option key={time} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#6366f1', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    📅 Schedule Appointment
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'add-client' && (
-              <form onSubmit={handleAddClient}>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  ➕ Add New Client
-                </h2>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.name}
-                    onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={clientForm.email}
-                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientForm.phone}
-                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#059669', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    ➕ Add Client
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'edit-client' && selectedItem && (
-              <form onSubmit={handleEditClient}>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  ✏️ Edit Client Information
-                </h2>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={clientForm.name}
-                    onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    value={clientForm.email}
-                    onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: '25px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                    Phone *
-                  </label>
-                  <input
-                    type="tel"
-                    value={clientForm.phone}
-                    onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
-                    required
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    type="button"
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit"
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f59e0b', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    ✏️ Update Client
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {modalType === 'video' && selectedItem && (
-              <div>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  🎥 Video Session
-                </h2>
-                
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '20px', 
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#1e40af' }}>Session Details:</h3>
-                  <p style={{ margin: '0 0 5px 0', color: '#374151' }}>
-                    <strong>{selectedItem.type}</strong>
-                  </p>
-                  <p style={{ margin: '0 0 5px 0', color: '#6b7280' }}>
-                    📅 {selectedItem.date} at {selectedItem.time}
-                  </p>
-                  <p style={{ margin: '0 0 5px 0', color: '#6b7280' }}>
-                    👤 {userType === 'therapist' ? selectedItem.client : selectedItem.therapist}
-                  </p>
-                  <p style={{ margin: '0', color: '#6b7280' }}>
-                    ⏱️ Duration: {selectedItem.duration}
-                  </p>
-                </div>
-
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '15px', 
-                  backgroundColor: '#fef3c7', 
-                  borderRadius: '8px',
-                  border: '1px solid #f59e0b'
-                }}>
-                  <p style={{ margin: '0', fontSize: '14px', color: '#92400e' }}>
-                    🔒 <strong>HIPAA Notice:</strong> This video session is encrypted and secure. 
-                    Please ensure you are in a private location before joining.
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button 
-                    onClick={() => { 
-                      window.open('https://meet.rbhpractice.com/session-' + selectedItem.id, '_blank'); 
-                      closeModal(); 
-                    }}
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#059669', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    🎥 Join Video Call
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalType === 'reschedule' && selectedItem && (
-              <div>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  📅 Reschedule Appointment
-                </h2>
-                
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '15px', 
-                  backgroundColor: '#f9fafb', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 10px 0', color: '#374151' }}>Current Appointment:</h3>
-                  <p style={{ margin: '0', color: '#6b7280' }}>
-                    {selectedItem.type} with {selectedItem.client}
-                  </p>
-                  <p style={{ margin: '0', color: '#6b7280' }}>
-                    📅 {selectedItem.date} at {selectedItem.time}
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f3f4f6', 
-                      color: '#374151', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Close
-                  </button>
-                  <button 
-                    onClick={() => {
-                      alert('✅ Advanced reschedule feature coming in Phase 2!');
-                      closeModal();
-                    }}
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#f59e0b', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    📅 Reschedule
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalType === 'progress' && selectedItem && (
-              <div>
-                <h2 style={{ marginBottom: '25px', color: '#1f2937' }}>
-                  📊 Progress Tracking - {selectedItem.name}
-                </h2>
-                
-                <div style={{ 
-                  marginBottom: '25px', 
-                  padding: '20px', 
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '8px' 
-                }}>
-                  <h3 style={{ margin: '0 0 15px 0', color: '#1e40af' }}>Overall Progress</h3>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937' }}>
-                      {selectedItem.progress}% Complete
-                    </span>
-                  </div>
-                  <div style={{ 
-                    width: '100%', 
-                    height: '12px', 
-                    backgroundColor: '#e5e7eb', 
-                    borderRadius: '6px',
-                    marginBottom: '15px'
-                  }}>
-                    <div style={{ 
-                      width: `${selectedItem.progress}%`, 
-                      height: '100%', 
-                      backgroundColor: selectedItem.progress > 75 ? '#10b981' : selectedItem.progress > 50 ? '#f59e0b' : '#ef4444',
-                      borderRadius: '6px'
-                    }}></div>
-                  </div>
-                  <p style={{ margin: '0', color: '#6b7280', fontSize: '14px' }}>
-                    Total Sessions: <strong>{selectedItem.totalSessions}</strong>
-                  </p>
-                </div>
-
-                {selectedItem.notes && (
-                  <div style={{ 
-                    marginBottom: '25px', 
-                    padding: '15px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '8px' 
-                  }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#92400e' }}>Recent Notes:</h4>
-                    <p style={{ margin: '0', color: '#92400e', fontSize: '14px' }}>
-                      {selectedItem.notes}
-                    </p>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={closeModal} 
-                    style={{
-                      padding: '12px 24px', 
-                      backgroundColor: '#6366f1', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '8px', 
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    📊 Close Progress View
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+                    <h3
