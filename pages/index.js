@@ -1,1212 +1,467 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Users, FileText, MessageSquare, Settings, Phone, Mail, Clock, Video, Plus, Bell, Menu, X, ChevronRight, User, Shield, Activity } from 'lucide-react';
 
-export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState('');
-  const [userName, setUserName] = useState('');
+export default function MobileHIPAAPortal() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // AI Note Taking States
-  const [sessionInput, setSessionInput] = useState('');
-  const [aiNotes, setAiNotes] = useState('');
-  const [isProcessingNotes, setIsProcessingNotes] = useState(false);
-  const [savedSessionNotes, setSavedSessionNotes] = useState([]);
-  const [currentNoteClient, setCurrentNoteClient] = useState('Sarah Johnson');
-  const [currentSessionType, setCurrentSessionType] = useState('Therapy Session');
-  const [currentSessionDate, setCurrentSessionDate] = useState(new Date().toISOString().split('T')[0]);
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
-  // Notification System States
-  const [notificationHistory, setNotificationHistory] = useState([]);
-  const [isTestingNotifications, setIsTestingNotifications] = useState(false);
-
-  const [appointments, setAppointments] = useState([
-    {
-      id: 1,
-      date: '2024-03-15',
-      time: '2:00 PM',
-      type: 'Therapy Session',
-      client: 'Sarah Johnson',
-      therapist: 'Dr. Rebecca B. Headley',
-      status: 'scheduled'
-    }
+  // Sample data
+  const [appointments] = useState([
+    { id: 1, client: 'Sarah Johnson', time: '2:00 PM', date: 'Today', type: 'Initial Consultation', status: 'confirmed' },
+    { id: 2, client: 'Michael Chen', time: '3:30 PM', date: 'Today', type: 'Follow-up', status: 'confirmed' },
+    { id: 3, client: 'Emma Davis', time: '10:00 AM', date: 'Tomorrow', type: 'Therapy Session', status: 'pending' }
   ]);
 
   const [clients] = useState([
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      email: 'sarah@email.com',
-      phone: '(555) 123-4567',
-      progress: 75,
-      totalSessions: 12
-    }
+    { id: 1, name: 'Sarah Johnson', lastSession: '2 days ago', progress: 'Good', status: 'Active' },
+    { id: 2, name: 'Michael Chen', lastSession: '1 week ago', progress: 'Excellent', status: 'Active' },
+    { id: 3, name: 'Emma Davis', lastSession: '3 days ago', progress: 'Improving', status: 'Active' }
   ]);
 
-  const [newAppointment, setNewAppointment] = useState({
-    client: '',
-    date: '',
-    time: '',
-    duration: '60',
-    type: 'Therapy Session',
-    notes: ''
-  });
-
-  const [newClient, setNewClient] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    emergencyContact: '',
-    notes: ''
-  });
-
-  // Notification Functions
-  const sendTestNotifications = async () => {
-    setIsTestingNotifications(true);
-    
-    try {
-      // Simulate sending email
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const emailNotification = {
-        id: Date.now(),
-        type: 'email',
-        recipient: 'sarah@email.com',
-        subject: 'Test Email - Appointment Confirmation',
-        content: 'This is a test email notification for your upcoming therapy session.',
-        status: 'sent',
-        sentAt: new Date().toISOString()
-      };
-      
-      setNotificationHistory(prev => [emailNotification, ...prev]);
-      
-      // Simulate sending SMS
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const smsNotification = {
-        id: Date.now() + 1,
-        type: 'sms',
-        recipient: '(555) 123-4567',
-        content: 'Test SMS: Your therapy appointment is confirmed for tomorrow at 2:00 PM.',
-        status: 'sent',
-        sentAt: new Date().toISOString()
-      };
-      
-      setNotificationHistory(prev => [smsNotification, ...prev]);
-      
-      alert('Test notifications sent successfully! Check the notification history below.');
-      
-    } catch (error) {
-      alert('Test failed: ' + error.message);
-    } finally {
-      setIsTestingNotifications(false);
-    }
-  };
-
-  const scheduleNotifications = async (appointmentData) => {
-    try {
-      const client = clients.find(c => c.name === appointmentData.client);
-      if (!client) return;
-
-      // Send confirmation email
-      const emailNotification = {
-        id: Date.now(),
-        type: 'email',
-        recipient: client.email,
-        subject: `Appointment Confirmation - ${appointmentData.date} at ${appointmentData.time}`,
-        content: `Dear ${appointmentData.client}, your ${appointmentData.type} is confirmed for ${appointmentData.date} at ${appointmentData.time}.`,
-        status: 'sent',
-        sentAt: new Date().toISOString(),
-        appointmentId: appointmentData.id
-      };
-      
-      setNotificationHistory(prev => [emailNotification, ...prev]);
-
-      // Send confirmation SMS if phone available
-      if (client.phone) {
-        const smsNotification = {
-          id: Date.now() + 1,
-          type: 'sms',
-          recipient: client.phone,
-          content: `Appointment confirmed: ${appointmentData.date} at ${appointmentData.time} with Dr. Rebecca B. Headley.`,
-          status: 'sent',
-          sentAt: new Date().toISOString(),
-          appointmentId: appointmentData.id
-        };
-        
-        setNotificationHistory(prev => [smsNotification, ...prev]);
-      }
-
-    } catch (error) {
-      console.error('Error scheduling notifications:', error);
-    }
-  };
-
-  // AI Note Functions
-  const generateAINotes = async () => {
-    if (!sessionInput.trim()) {
-      alert('Please enter session notes in the text area.');
-      return;
-    }
-
-    setIsProcessingNotes(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      const mockAINotes = `## Clinical Session Notes
-
-**Client:** ${currentNoteClient}
-**Date:** ${currentSessionDate}
-**Session Type:** ${currentSessionType}
-**Duration:** 50 minutes
-
-### Presenting Concerns
-Based on session notes: "${sessionInput.substring(0, 100)}${sessionInput.length > 100 ? '...' : ''}"
-
-### Therapeutic Interventions
-- Cognitive behavioral techniques discussed
-- Mindfulness and grounding exercises practiced
-- Psychoeducation provided on anxiety management
-
-### Client Response & Engagement
-Client was engaged and receptive to therapeutic interventions. Demonstrated good insight and willingness to practice new coping strategies.
-
-### Progress Toward Goals
-- Goal 1 (Reduce anxiety symptoms): Moderate progress noted
-- Goal 2 (Improve coping skills): Good progress with breathing techniques
-
-### Homework Assigned
-1. Practice daily mindfulness exercises (10 minutes)
-2. Complete thought monitoring worksheet
-3. Apply breathing techniques when anxiety arises
-
-### Clinical Observations
-- Client appeared more relaxed by end of session
-- Good eye contact maintained throughout
-- Demonstrated understanding of concepts discussed
-
-### Plan for Next Session
-- Review homework completion and effectiveness
-- Continue CBT techniques for anxiety management
-- Assess progress on treatment goals
-
-### Risk Assessment
-No immediate safety concerns identified. Client stable and appropriate for continued outpatient treatment.`;
-
-      setAiNotes(mockAINotes);
-    } catch (error) {
-      alert('Error generating AI notes. Please try again.');
-    } finally {
-      setIsProcessingNotes(false);
-    }
-  };
-
-  const saveSessionNotes = () => {
-    if (!aiNotes.trim()) {
-      alert('No notes to save. Please generate AI notes first.');
-      return;
-    }
-
-    const newNote = {
-      id: Date.now(),
-      client: currentNoteClient,
-      date: currentSessionDate,
-      type: currentSessionType,
-      originalNotes: sessionInput,
-      aiNotes: aiNotes,
-      createdAt: new Date().toISOString()
-    };
-
-    setSavedSessionNotes(prev => [newNote, ...prev]);
-    setSessionInput('');
-    setAiNotes('');
-    alert('Session notes saved successfully!');
-  };
-
-  const exportSessionNotes = (note) => {
-    const content = `# Session Notes - ${note.client}
-
-**Date:** ${note.date}
-**Type:** ${note.type}
-**Created:** ${new Date(note.createdAt).toLocaleString()}
-
-## Original Session Notes
-${note.originalNotes}
-
-## AI Generated Clinical Notes
-${note.aiNotes}`;
-
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `session-notes-${note.client}-${note.date}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Appointment Functions
-  const handleLogin = (type, name) => {
-    setUserType(type);
-    setUserName(name);
-    setIsLoggedIn(true);
-  };
-
-  const handleScheduleAppointment = async () => {
-    if (!newAppointment.client || !newAppointment.date || !newAppointment.time) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    try {
-      const appointmentData = {
-        ...newAppointment,
-        id: appointments.length + 1,
-        therapist: 'Dr. Rebecca B. Headley',
-        status: 'scheduled'
-      };
-
-      setAppointments(prev => [...prev, appointmentData]);
-      await scheduleNotifications(appointmentData);
-      
-      setNewAppointment({ client: '', date: '', time: '', duration: '60', type: 'Therapy Session', notes: '' });
-      setShowModal(false);
-      
-      alert('Appointment scheduled successfully! Confirmation notifications have been sent.');
-    } catch (error) {
-      alert('Failed to schedule appointment. Please try again.');
-    }
-  };
-
-  const handleCancelAppointment = (appointmentId) => {
-    setAppointments(appointments.filter(apt => apt.id !== appointmentId));
-    alert('Appointment cancelled successfully!');
-  };
-
-  const handleAddClient = () => {
-    if (!newClient.name || !newClient.email) {
-      alert('Please fill in required fields (Name and Email)');
-      return;
-    }
-
-    setNewClient({ name: '', email: '', phone: '', emergencyContact: '', notes: '' });
-    setShowModal(false);
-    alert('Client added successfully!');
-  };
-
-  const openModal = (type) => {
-    setModalType(type);
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setModalType('');
-  };
-
-  if (!isLoggedIn) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'Cambria, serif'
-      }}>
-        <div style={{
-          background: 'white',
-          padding: '3rem',
-          borderRadius: '20px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          textAlign: 'center',
-          maxWidth: '400px',
-          width: '90%'
-        }}>
-          <h1 style={{ color: '#333', marginBottom: '2rem', fontSize: '2rem' }}>
-            🔐 HIPAA Portal Login
-          </h1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+  // Login component
+  const LoginScreen = () => (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <Shield className="w-12 h-12 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">HIPAA Portal</h1>
+            <p className="text-gray-600">Secure Practice Management</p>
+          </div>
+          
+          <div className="space-y-4">
             <button
-              onClick={() => handleLogin('therapist', 'Dr. Rebecca B. Headley')}
-              style={{
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                padding: '1rem 2rem',
-                borderRadius: '10px',
-                fontSize: '1.1rem',
-                cursor: 'pointer',
-                fontFamily: 'Cambria, serif'
-              }}
+              onClick={() => setCurrentUser({ role: 'therapist', name: 'Dr. Smith' })}
+              className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-colors"
             >
               👨‍⚕️ Login as Therapist
             </button>
             <button
-              onClick={() => handleLogin('client', 'Sarah Johnson')}
-              style={{
-                background: '#2196F3',
-                color: 'white',
-                border: 'none',
-                padding: '1rem 2rem',
-                borderRadius: '10px',
-                fontSize: '1.1rem',
-                cursor: 'pointer',
-                fontFamily: 'Cambria, serif'
-              }}
+              onClick={() => setCurrentUser({ role: 'client', name: 'Patient' })}
+              className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors"
             >
               👤 Login as Client
             </button>
           </div>
+          
+          <div className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-sm text-yellow-800">
+              🔒 <strong>HIPAA Notice:</strong> This portal uses end-to-end encryption and complies with HIPAA security standards.
+            </p>
+          </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: '#f5f7fa',
-      fontFamily: 'Cambria, serif'
-    }}>
-      {/* Header */}
-      <div style={{
-        background: 'white',
-        padding: '1rem 2rem',
-        borderBottom: '1px solid #e0e0e0',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h1 style={{ color: '#333', margin: 0 }}>🔐 HIPAA Practice Portal</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ color: '#666' }}>Welcome, {userName}</span>
+  // Mobile header
+  const MobileHeader = () => (
+    <div className="bg-white shadow-sm border-b border-gray-200 p-4 sticky top-0 z-50">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
           <button
-            onClick={() => setIsLoggedIn(false)}
-            style={{
-              background: '#f44336',
-              color: 'white',
-              border: 'none',
-              padding: '0.5rem 1rem',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 rounded-lg hover:bg-gray-100"
           >
-            Logout
+            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">HIPAA Portal</h1>
+            <p className="text-sm text-gray-500">{currentUser?.name}</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button className="p-2 rounded-lg hover:bg-gray-100 relative">
+            <Bell className="w-6 h-6 text-gray-600" />
+            {notifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setCurrentUser(null)}
+            className="p-2 rounded-lg hover:bg-gray-100"
+          >
+            <User className="w-6 h-6 text-gray-600" />
           </button>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Navigation */}
-      <div style={{
-        background: 'white',
-        padding: '0 2rem',
-        borderBottom: '1px solid #e0e0e0'
-      }}>
-        <div style={{ display: 'flex', gap: '2rem' }}>
-          {userType === 'therapist' ? 
-            ['dashboard', 'appointments', 'clients', 'ai-notes', 'notifications'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  background: activeTab === tab ? '#667eea' : 'transparent',
-                  color: activeTab === tab ? 'white' : '#666',
-                  border: 'none',
-                  padding: '1rem 1.5rem',
-                  cursor: 'pointer',
-                  borderRadius: activeTab === tab ? '10px 10px 0 0' : '0',
-                  textTransform: 'capitalize',
-                  fontFamily: 'Cambria, serif'
-                }}
-              >
-                {tab === 'ai-notes' ? '🤖 AI Notes' : 
-                 tab === 'notifications' ? '📧 Notifications' :
-                 tab}
-              </button>
-            )) :
-            ['dashboard', 'appointments'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  background: activeTab === tab ? '#667eea' : 'transparent',
-                  color: activeTab === tab ? 'white' : '#666',
-                  border: 'none',
-                  padding: '1rem 1.5rem',
-                  cursor: 'pointer',
-                  borderRadius: activeTab === tab ? '10px 10px 0 0' : '0',
-                  textTransform: 'capitalize',
-                  fontFamily: 'Cambria, serif'
-                }}
-              >
-                {tab}
-              </button>
-            ))
-          }
+  // Mobile navigation menu
+  const MobileMenu = () => (
+    <div className={`fixed inset-0 z-40 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
+      <div className="bg-white w-80 h-full shadow-xl">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+              <User className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">{currentUser?.name}</h3>
+              <p className="text-sm text-gray-500 capitalize">{currentUser?.role}</p>
+            </div>
+          </div>
+        </div>
+        
+        <nav className="p-4">
+          {[
+            { id: 'dashboard', icon: Activity, label: 'Dashboard' },
+            { id: 'appointments', icon: Calendar, label: 'Appointments' },
+            { id: 'clients', icon: Users, label: 'Clients' },
+            { id: 'messages', icon: MessageSquare, label: 'Messages' },
+            { id: 'documents', icon: FileText, label: 'Documents' },
+            { id: 'settings', icon: Settings, label: 'Settings' }
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => {
+                setActiveTab(id);
+                setIsMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center justify-between p-3 rounded-lg mb-2 transition-colors ${
+                activeTab === id ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{label}</span>
+              </div>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="bg-black bg-opacity-50 flex-1" onClick={() => setIsMobileMenuOpen(false)} />
+    </div>
+  );
+
+  // Dashboard content
+  const Dashboard = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-blue-50 rounded-xl p-4">
+          <div className="flex items-center space-x-3">
+            <Calendar className="w-8 h-8 text-blue-600" />
+            <div>
+              <p className="text-2xl font-bold text-blue-900">5</p>
+              <p className="text-sm text-blue-600">Today's Appointments</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-green-50 rounded-xl p-4">
+          <div className="flex items-center space-x-3">
+            <Users className="w-8 h-8 text-green-600" />
+            <div>
+              <p className="text-2xl font-bold text-green-900">23</p>
+              <p className="text-sm text-green-600">Active Clients</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ padding: '2rem' }}>
-        {activeTab === 'dashboard' && (
-          <div>
-            <h2 style={{ color: '#333', marginBottom: '2rem' }}>📊 Dashboard</h2>
-            
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                textAlign: 'center',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#4CAF50', fontSize: '2rem', margin: '0' }}>{appointments.length}</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>Total Appointments</p>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">Today's Schedule</h3>
+        <div className="space-y-3">
+          {appointments.slice(0, 3).map((apt) => (
+            <div key={apt.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{apt.client}</p>
+                  <p className="text-sm text-gray-500">{apt.time} • {apt.type}</p>
+                </div>
               </div>
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                textAlign: 'center',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#2196F3', fontSize: '2rem', margin: '0' }}>{clients.length}</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>Active Clients</p>
-              </div>
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                textAlign: 'center',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#9c27b0', fontSize: '2rem', margin: '0' }}>{savedSessionNotes.length}</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>AI Notes Generated</p>
-              </div>
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                textAlign: 'center',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#e91e63', fontSize: '2rem', margin: '0' }}>{notificationHistory.length}</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>Notifications Sent</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'notifications' && (
-          <div>
-            <h2 style={{ color: '#333', marginBottom: '2rem' }}>📧 Notification Center</h2>
-            
-            {/* Test Notifications */}
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              marginBottom: '2rem',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-              textAlign: 'center'
-            }}>
-              <h3 style={{ color: '#333', marginBottom: '1rem' }}>🧪 Test Notification System</h3>
-              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-                Send test email and SMS notifications to verify your system is working
-              </p>
-              <button
-                onClick={sendTestNotifications}
-                disabled={isTestingNotifications}
-                style={{
-                  background: isTestingNotifications ? '#ccc' : '#2196F3',
-                  color: 'white',
-                  border: 'none',
-                  padding: '1rem 2rem',
-                  borderRadius: '8px',
-                  cursor: isTestingNotifications ? 'not-allowed' : 'pointer',
-                  fontSize: '1rem',
-                  fontFamily: 'Cambria, serif'
-                }}
-              >
-                {isTestingNotifications ? '🧪 Testing...' : '🧪 Test Notification System'}
+              <button className="p-2 bg-blue-600 text-white rounded-lg">
+                <Video className="w-4 h-4" />
               </button>
             </div>
+          ))}
+        </div>
+      </div>
 
-            {/* Notification History */}
-            {notificationHistory.length > 0 && (
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📊 Notification History</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {notificationHistory.map(notification => (
-                    <div key={notification.id} style={{
-                      background: '#f9f9f9',
-                      padding: '1rem',
-                      borderRadius: '8px',
-                      border: '1px solid #e0e0e0',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '1.2rem' }}>
-                            {notification.type === 'email' ? '📧' : '📱'}
-                          </span>
-                          <strong>{notification.type.toUpperCase()}</strong>
-                          <span style={{
-                            background: '#4CAF50',
-                            color: 'white',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '12px',
-                            fontSize: '0.7rem',
-                            textTransform: 'uppercase'
-                          }}>
-                            SENT
-                          </span>
-                        </div>
-                        <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
-                          To: {notification.recipient}
-                        </p>
-                        {notification.subject && (
-                          <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>
-                            {notification.subject}
-                          </p>
-                        )}
-                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#333' }}>
-                          {notification.content}
-                        </p>
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#666', marginLeft: '1rem' }}>
-                        {new Date(notification.sentAt).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => { setModalType('new-appointment'); setShowModal(true); }}
+            className="flex items-center space-x-2 p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="font-medium">New Appointment</span>
+          </button>
+          <button
+            onClick={() => { setModalType('ai-notes'); setShowModal(true); }}
+            className="flex items-center space-x-2 p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="font-medium">AI Notes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
-        {activeTab === 'appointments' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ color: '#333', margin: 0 }}>📅 Appointments</h2>
-              {userType === 'therapist' && (
-                <button
-                  onClick={() => openModal('schedule')}
-                  style={{
-                    background: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    padding: '1rem 2rem',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontFamily: 'Cambria, serif'
-                  }}
-                >
-                  ➕ Schedule New Appointment
-                </button>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {appointments.map(appointment => (
-                <div key={appointment.id} style={{
-                  background: 'white',
-                  padding: '1.5rem',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <h3 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>{appointment.type}</h3>
-                    <p style={{ color: '#666', margin: '0' }}>
-                      📅 {appointment.date} at {appointment.time} | 
-                      👤 {appointment.client} | 
-                      👨‍⚕️ {appointment.therapist}
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => window.open('https://meet.google.com/new', '_blank')}
-                      style={{
-                        background: '#2196F3',
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.5rem 1rem',
-                        borderRadius: '5px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      🎥 Join Call
-                    </button>
-                    {userType === 'therapist' && (
-                      <button
-                        onClick={() => handleCancelAppointment(appointment.id)}
-                        style={{
-                          background: '#f44336',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ❌ Cancel
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'clients' && userType === 'therapist' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ color: '#333', margin: 0 }}>👥 Client Management</h2>
-              <button
-                onClick={() => openModal('addClient')}
-                style={{
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  padding: '1rem 2rem',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontFamily: 'Cambria, serif'
-                }}
-              >
-                ➕ Add New Client
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {clients.map(client => (
-                <div key={client.id} style={{
-                  background: 'white',
-                  padding: '1.5rem',
-                  borderRadius: '10px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-                }}>
-                  <h3 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>{client.name}</h3>
-                  <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
-                    📧 {client.email} | 📞 {client.phone}
-                  </p>
-                  <div style={{ margin: '1rem 0' }}>
-                    <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
-                      Progress: {client.progress}% | Sessions: {client.totalSessions}
-                    </p>
-                    <div style={{
-                      width: '100%',
-                      height: '10px',
-                      background: '#e0e0e0',
-                      borderRadius: '5px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        width: `${client.progress}%`,
-                        height: '100%',
-                        background: '#4CAF50',
-                        transition: 'width 0.3s ease'
-                      }}></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'ai-notes' && (
-          <div>
-            <h2 style={{ color: '#333', marginBottom: '2rem' }}>🤖 AI Clinical Notes</h2>
-            
-            {/* Session Setup */}
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              marginBottom: '2rem',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📋 Session Information</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
-                    Client Name
-                  </label>
-                  <select
-                    value={currentNoteClient}
-                    onChange={(e) => setCurrentNoteClient(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '5px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    <option value="Sarah Johnson">Sarah Johnson</option>
-                    <option value="Michael Chen">Michael Chen</option>
-                    <option value="Emily Rodriguez">Emily Rodriguez</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
-                    Session Type
-                  </label>
-                  <select
-                    value={currentSessionType}
-                    onChange={(e) => setCurrentSessionType(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '5px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    <option value="Therapy Session">General Therapy</option>
-                    <option value="CBT Session">CBT Session</option>
-                    <option value="Trauma Therapy">Trauma Therapy</option>
-                    <option value="Initial Consultation">Initial Consultation</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
-                    Session Date
-                  </label>
-                  <input
-                    type="date"
-                    value={currentSessionDate}
-                    onChange={(e) => setCurrentSessionDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '5px',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Session Notes Input */}
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              marginBottom: '2rem',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ color: '#333', marginBottom: '1rem' }}>📝 Session Documentation</h3>
-              
-              <div style={{
-                background: '#e3f2fd',
-                padding: '1rem',
-                borderRadius: '5px',
-                border: '1px solid #2196F3',
-                marginBottom: '1rem'
-              }}>
-                <p style={{ color: '#1976d2', margin: 0, fontWeight: 'bold' }}>
-                  💡 Enter your session notes, key client statements, observations, and therapeutic interventions
-                </p>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                  The AI will structure these into professional clinical notes
-                </p>
-              </div>
-
+  // Appointments content
+  const Appointments = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Appointments</h2>
+        <button
+          onClick={() => { setModalType('new-appointment'); setShowModal(true); }}
+          className="p-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+      </div>
+      
+      <div className="space-y-3">
+        {appointments.map((apt) => (
+          <div key={apt.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
-                  Session Notes & Observations
-                </label>
-                <textarea
-                  value={sessionInput}
-                  onChange={(e) => setSessionInput(e.target.value)}
-                  placeholder="Enter your session notes here... Include:&#10;• Key client statements and concerns&#10;• Therapeutic interventions used&#10;• Client responses and engagement level&#10;• Behavioral observations&#10;• Progress toward treatment goals&#10;• Any homework or action items discussed"
-                  style={{
-                    width: '100%',
-                    minHeight: '200px',
-                    padding: '1rem',
-                    border: '2px solid #ddd',
-                    borderRadius: '8px',
-                    fontFamily: 'Cambria, serif',
-                    fontSize: '1rem',
-                    lineHeight: '1.6',
-                    resize: 'vertical'
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                  <span style={{ color: '#666', fontSize: '0.8rem' }}>
-                    {sessionInput.length} characters
-                  </span>
-                  <button
-                    onClick={generateAINotes}
-                    disabled={isProcessingNotes || !sessionInput.trim()}
-                    style={{
-                      background: isProcessingNotes ? '#ccc' : '#2196F3',
-                      color: 'white',
-                      border: 'none',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      cursor: isProcessingNotes ? 'not-allowed' : 'pointer',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    {isProcessingNotes ? '🤖 Generating Notes...' : '🤖 Generate AI Notes'}
-                  </button>
-                </div>
+                <h3 className="font-semibold text-gray-900">{apt.client}</h3>
+                <p className="text-sm text-gray-500">{apt.date} at {apt.time}</p>
               </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                apt.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {apt.status}
+              </span>
             </div>
+            
+            <p className="text-gray-600 mb-3">{apt.type}</p>
+            
+            <div className="flex space-x-2">
+              <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium">
+                Join Session
+              </button>
+              <button className="p-2 border border-gray-300 rounded-lg">
+                <Phone className="w-5 h-5 text-gray-600" />
+              </button>
+              <button className="p-2 border border-gray-300 rounded-lg">
+                <Mail className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-            {/* AI Generated Notes */}
-            {aiNotes && (
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                marginBottom: '2rem',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#333', marginBottom: '1rem' }}>🤖 AI Generated Clinical Notes</h3>
-                <div style={{
-                  background: '#f9f9f9',
-                  padding: '1.5rem',
-                  borderRadius: '8px',
-                  border: '1px solid #e0e0e0',
-                  maxHeight: '500px',
-                  overflow: 'auto'
-                }}>
-                  <pre style={{ 
-                    margin: 0, 
-                    whiteSpace: 'pre-wrap', 
-                    fontFamily: 'Cambria, serif',
-                    lineHeight: '1.6',
-                    fontSize: '0.95rem'
-                  }}>
-                    {aiNotes}
-                  </pre>
-                </div>
-                
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                  <button
-                    onClick={saveSessionNotes}
-                    style={{
-                      background: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      cursor: 'pointer',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    💾 Save Notes
-                  </button>
-                  <button
-                    onClick={() => setAiNotes('')}
-                    style={{
-                      background: '#f44336',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      cursor: 'pointer',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    🗑️ Clear Notes
-                  </button>
-                </div>
+  // Clients content
+  const Clients = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Clients</h2>
+        <button
+          onClick={() => { setModalType('new-client'); setShowModal(true); }}
+          className="p-2 bg-blue-600 text-white rounded-lg"
+        >
+          <Plus className="w-5 h-5" />
+        </button>
+      </div>
+      
+      <div className="space-y-3">
+        {clients.map((client) => (
+          <div key={client.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 text-gray-600" />
               </div>
-            )}
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{client.name}</h3>
+                <p className="text-sm text-gray-500">Last session: {client.lastSession}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                client.progress === 'Excellent' ? 'bg-green-100 text-green-800' :
+                client.progress === 'Good' ? 'bg-blue-100 text-blue-800' :
+                'bg-yellow-100 text-yellow-800'
+              }`}>
+                {client.progress}
+              </span>
+            </div>
+            
+            <div className="flex space-x-2">
+              <button className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium">
+                View Profile
+              </button>
+              <button className="p-2 border border-gray-300 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-            {/* Session Notes History */}
-            {savedSessionNotes.length > 0 && (
-              <div style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-              }}>
-                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📚 Session Notes History</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {savedSessionNotes.map(note => (
-                    <div key={note.id} style={{
-                      background: '#f9f9f9',
-                      padding: '1.5rem',
-                      borderRadius: '8px',
-                      border: '1px solid #e0e0e0'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                        <div>
-                          <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
-                            {note.client} - {note.type}
-                          </h4>
-                          <p style={{ color: '#666', margin: 0, fontSize: '0.9rem' }}>
-                            📅 {note.date} | ⏰ {new Date(note.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => exportSessionNotes(note)}
-                          style={{
-                            background: '#2196F3',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.5rem 1rem',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          📄 Export
-                        </button>
-                      </div>
-                      
-                      <div style={{
-                        background: 'white',
-                        padding: '1rem',
-                        borderRadius: '5px',
-                        maxHeight: '200px',
-                        overflow: 'auto'
-                      }}>
-                        <pre style={{ 
-                          margin: 0, 
-                          whiteSpace: 'pre-wrap', 
-                          fontFamily: 'Cambria, serif',
-                          fontSize: '0.9rem',
-                          lineHeight: '1.5'
-                        }}>
-                          {note.aiNotes}
-                        </pre>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+  // Modal component
+  const Modal = () => {
+    if (!showModal) return null;
+
+    const modalContent = {
+      'new-appointment': (
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Schedule New Appointment</h3>
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Client name"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="datetime-local"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <select className="w-full p-3 border border-gray-300 rounded-lg">
+              <option>Initial Consultation</option>
+              <option>Follow-up</option>
+              <option>Therapy Session</option>
+            </select>
+            <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium">
+              Schedule Appointment
+            </button>
+          </div>
+        </div>
+      ),
+      'ai-notes': (
+        <div>
+          <h3 className="text-lg font-semibold mb-4">AI Clinical Notes</h3>
+          <p className="text-gray-600 mb-4">Generate professional clinical notes using AI assistance.</p>
+          <textarea
+            placeholder="Enter session notes or key points..."
+            className="w-full p-3 border border-gray-300 rounded-lg h-32 mb-4"
+          />
+          <button className="w-full bg-green-600 text-white py-3 rounded-lg font-medium">
+            Generate AI Notes
+          </button>
+        </div>
+      ),
+      'new-client': (
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Add New Client</h3>
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Client name"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="email"
+              placeholder="Email address"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <input
+              type="tel"
+              placeholder="Phone number"
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            />
+            <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium">
+              Add Client
+            </button>
+          </div>
+        </div>
+      )
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+          <div className="flex items-center justify-between mb-4">
+            <div></div>
+            <button
+              onClick={() => setShowModal(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          {modalContent[modalType]}
+        </div>
+      </div>
+    );
+  };
+
+  // Main render
+  if (!currentUser) {
+    return <LoginScreen />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <MobileHeader />
+      <MobileMenu />
+      
+      <div className="p-4 pb-20">
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'appointments' && <Appointments />}
+        {activeTab === 'clients' && <Clients />}
+        {activeTab === 'messages' && (
+          <div className="text-center py-12">
+            <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Messages feature coming soon</p>
+          </div>
+        )}
+        {activeTab === 'documents' && (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Documents feature coming soon</p>
+          </div>
+        )}
+        {activeTab === 'settings' && (
+          <div className="text-center py-12">
+            <Settings className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">Settings feature coming soon</p>
           </div>
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'white',
-            padding: '2rem',
-            borderRadius: '10px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
-          }}>
-            {modalType === 'schedule' && (
-              <div>
-                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📅 Schedule New Appointment</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Client *</label>
-                    <select
-                      value={newAppointment.client}
-                      onChange={(e) => setNewAppointment({...newAppointment, client: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    >
-                      <option value="">Select a client</option>
-                      {clients.map(client => (
-                        <option key={client.id} value={client.name}>{client.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Date *</label>
-                    <input
-                      type="date"
-                      value={newAppointment.date}
-                      onChange={(e) => setNewAppointment({...newAppointment, date: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Time *</label>
-                    <input
-                      type="time"
-                      value={newAppointment.time}
-                      onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                  <button
-                    onClick={handleScheduleAppointment}
-                    style={{
-                      background: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      flex: 1,
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    📅 Schedule & Send Notifications
-                  </button>
-                  <button
-                    onClick={closeModal}
-                    style={{
-                      background: '#666',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {modalType === 'addClient' && (
-              <div>
-                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>👤 Add New Client</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Full Name *</label>
-                    <input
-                      type="text"
-                      value={newClient.name}
-                      onChange={(e) => setNewClient({...newClient, name: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Email Address *</label>
-                    <input
-                      type="email"
-                      value={newClient.email}
-                      onChange={(e) => setNewClient({...newClient, email: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Phone Number</label>
-                    <input
-                      type="tel"
-                      value={newClient.phone}
-                      onChange={(e) => setNewClient({...newClient, phone: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                  <button
-                    onClick={handleAddClient}
-                    style={{
-                      background: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      flex: 1,
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    ➕ Add Client
-                  </button>
-                  <button
-                    onClick={closeModal}
-                    style={{
-                      background: '#666',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+      {/* Mobile bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-2">
+        <div className="flex justify-around">
+          {[
+            { id: 'dashboard', icon: Activity, label: 'Dashboard' },
+            { id: 'appointments', icon: Calendar, label: 'Appointments' },
+            { id: 'clients', icon: Users, label: 'Clients' },
+            { id: 'messages', icon: MessageSquare, label: 'Messages' }
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center p-2 rounded-lg transition-colors ${
+                activeTab === id ? 'text-blue-600 bg-blue-50' : 'text-gray-600'
+              }`}
+            >
+              <Icon className="w-6 h-6 mb-1" />
+              <span className="text-xs font-medium">{label}</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
+
+      <Modal />
     </div>
   );
 }
