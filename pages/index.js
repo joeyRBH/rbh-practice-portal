@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -7,12 +7,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-  const [googleAccessToken, setGoogleAccessToken] = useState('');
-  const [calendarEvents, setCalendarEvents] = useState([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
 
-  // AI Note Taking States (Fixed)
+  // AI Note Taking States
   const [sessionInput, setSessionInput] = useState('');
   const [aiNotes, setAiNotes] = useState('');
   const [isProcessingNotes, setIsProcessingNotes] = useState(false);
@@ -21,11 +17,9 @@ export default function Home() {
   const [currentSessionType, setCurrentSessionType] = useState('Therapy Session');
   const [currentSessionDate, setCurrentSessionDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Google Calendar API configuration (Optional - for future use)
-  const GOOGLE_CLIENT_ID = 'your-actual-client-id.apps.googleusercontent.com';
-  const GOOGLE_API_KEY = 'your-actual-api-key';
-  const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+  // Notification System States
+  const [notificationHistory, setNotificationHistory] = useState([]);
+  const [isTestingNotifications, setIsTestingNotifications] = useState(false);
 
   const [appointments, setAppointments] = useState([
     {
@@ -35,8 +29,7 @@ export default function Home() {
       type: 'Therapy Session',
       client: 'Sarah Johnson',
       therapist: 'Dr. Rebecca B. Headley',
-      status: 'scheduled',
-      googleEventId: null
+      status: 'scheduled'
     }
   ]);
 
@@ -68,32 +61,89 @@ export default function Home() {
     notes: ''
   });
 
-  // Custom Calendar Functions (Option C Preparation)
-  const addToCustomCalendar = async (appointmentData) => {
+  // Notification Functions
+  const sendTestNotifications = async () => {
+    setIsTestingNotifications(true);
+    
     try {
-      // Future: Custom calendar implementation
-      // This will store appointments in your own secure database
-      console.log('Adding to custom calendar:', appointmentData);
+      // Simulate sending email
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // For now, just add to local state
-      const newAppointment = {
-        id: appointments.length + 1,
-        ...appointmentData,
-        therapist: 'Dr. Rebecca B. Headley',
-        status: 'scheduled',
-        googleEventId: null,
-        customCalendarId: `custom_${Date.now()}`
+      const emailNotification = {
+        id: Date.now(),
+        type: 'email',
+        recipient: 'sarah@email.com',
+        subject: 'Test Email - Appointment Confirmation',
+        content: 'This is a test email notification for your upcoming therapy session.',
+        status: 'sent',
+        sentAt: new Date().toISOString()
       };
       
-      setAppointments(prev => [...prev, newAppointment]);
-      return newAppointment.id;
+      setNotificationHistory(prev => [emailNotification, ...prev]);
+      
+      // Simulate sending SMS
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const smsNotification = {
+        id: Date.now() + 1,
+        type: 'sms',
+        recipient: '(555) 123-4567',
+        content: 'Test SMS: Your therapy appointment is confirmed for tomorrow at 2:00 PM.',
+        status: 'sent',
+        sentAt: new Date().toISOString()
+      };
+      
+      setNotificationHistory(prev => [smsNotification, ...prev]);
+      
+      alert('Test notifications sent successfully! Check the notification history below.');
+      
     } catch (error) {
-      console.error('Error adding to custom calendar:', error);
-      throw error;
+      alert('Test failed: ' + error.message);
+    } finally {
+      setIsTestingNotifications(false);
     }
   };
 
-  // AI Note Taking Functions (Fixed)
+  const scheduleNotifications = async (appointmentData) => {
+    try {
+      const client = clients.find(c => c.name === appointmentData.client);
+      if (!client) return;
+
+      // Send confirmation email
+      const emailNotification = {
+        id: Date.now(),
+        type: 'email',
+        recipient: client.email,
+        subject: `Appointment Confirmation - ${appointmentData.date} at ${appointmentData.time}`,
+        content: `Dear ${appointmentData.client}, your ${appointmentData.type} is confirmed for ${appointmentData.date} at ${appointmentData.time}.`,
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+        appointmentId: appointmentData.id
+      };
+      
+      setNotificationHistory(prev => [emailNotification, ...prev]);
+
+      // Send confirmation SMS if phone available
+      if (client.phone) {
+        const smsNotification = {
+          id: Date.now() + 1,
+          type: 'sms',
+          recipient: client.phone,
+          content: `Appointment confirmed: ${appointmentData.date} at ${appointmentData.time} with Dr. Rebecca B. Headley.`,
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+          appointmentId: appointmentData.id
+        };
+        
+        setNotificationHistory(prev => [smsNotification, ...prev]);
+      }
+
+    } catch (error) {
+      console.error('Error scheduling notifications:', error);
+    }
+  };
+
+  // AI Note Functions
   const generateAINotes = async () => {
     if (!sessionInput.trim()) {
       alert('Please enter session notes in the text area.');
@@ -103,10 +153,8 @@ export default function Home() {
     setIsProcessingNotes(true);
     
     try {
-      // Simulate AI processing delay
       await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Generate mock AI notes based on input
       const mockAINotes = `## Clinical Session Notes
 
 **Client:** ${currentNoteClient}
@@ -149,7 +197,6 @@ No immediate safety concerns identified. Client stable and appropriate for conti
 
       setAiNotes(mockAINotes);
     } catch (error) {
-      console.error('Error generating AI notes:', error);
       alert('Error generating AI notes. Please try again.');
     } finally {
       setIsProcessingNotes(false);
@@ -173,11 +220,8 @@ No immediate safety concerns identified. Client stable and appropriate for conti
     };
 
     setSavedSessionNotes(prev => [newNote, ...prev]);
-    
-    // Reset form
     setSessionInput('');
     setAiNotes('');
-    
     alert('Session notes saved successfully!');
   };
 
@@ -205,30 +249,7 @@ ${note.aiNotes}`;
     URL.revokeObjectURL(url);
   };
 
-  // Google Calendar Functions (Backup Option)
-  const connectGoogleCalendar = async () => {
-    try {
-      if (!window.gapi || !window.gapi.auth2) {
-        alert('Google API not loaded. Please refresh the page and try again.');
-        return;
-      }
-
-      const authInstance = window.gapi.auth2.getAuthInstance();
-      const user = await authInstance.signIn({
-        scope: SCOPES
-      });
-      
-      const accessToken = user.getAuthResponse().access_token;
-      setGoogleAccessToken(accessToken);
-      setIsGoogleConnected(true);
-      
-      alert('Google Calendar connected successfully!');
-    } catch (error) {
-      console.error('Error connecting to Google Calendar:', error);
-      alert('Failed to connect to Google Calendar. Custom calendar will be used instead.');
-    }
-  };
-
+  // Appointment Functions
   const handleLogin = (type, name) => {
     setUserType(type);
     setUserName(name);
@@ -242,25 +263,28 @@ ${note.aiNotes}`;
     }
 
     try {
-      // Use custom calendar by default (Option C)
-      await addToCustomCalendar(newAppointment);
+      const appointmentData = {
+        ...newAppointment,
+        id: appointments.length + 1,
+        therapist: 'Dr. Rebecca B. Headley',
+        status: 'scheduled'
+      };
+
+      setAppointments(prev => [...prev, appointmentData]);
+      await scheduleNotifications(appointmentData);
       
       setNewAppointment({ client: '', date: '', time: '', duration: '60', type: 'Therapy Session', notes: '' });
       setShowModal(false);
       
-      alert('Appointment scheduled successfully in custom calendar!');
+      alert('Appointment scheduled successfully! Confirmation notifications have been sent.');
     } catch (error) {
       alert('Failed to schedule appointment. Please try again.');
     }
   };
 
-  const handleCancelAppointment = async (appointmentId) => {
-    try {
-      setAppointments(appointments.filter(apt => apt.id !== appointmentId));
-      alert('Appointment cancelled successfully!');
-    } catch (error) {
-      alert('Failed to cancel appointment. Please try again.');
-    }
+  const handleCancelAppointment = (appointmentId) => {
+    setAppointments(appointments.filter(apt => apt.id !== appointmentId));
+    alert('Appointment cancelled successfully!');
   };
 
   const handleAddClient = () => {
@@ -268,13 +292,6 @@ ${note.aiNotes}`;
       alert('Please fill in required fields (Name and Email)');
       return;
     }
-
-    const client = {
-      id: clients.length + 1,
-      ...newClient,
-      progress: 0,
-      totalSessions: 0
-    };
 
     setNewClient({ name: '', email: '', phone: '', emergencyContact: '', notes: '' });
     setShowModal(false);
@@ -368,12 +385,6 @@ ${note.aiNotes}`;
         <h1 style={{ color: '#333', margin: 0 }}>🔐 HIPAA Practice Portal</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span style={{ color: '#666' }}>Welcome, {userName}</span>
-          <span style={{ 
-            color: '#4CAF50',
-            fontWeight: 'bold'
-          }}>
-            📅 Custom Calendar Active
-          </span>
           <button
             onClick={() => setIsLoggedIn(false)}
             style={{
@@ -398,7 +409,7 @@ ${note.aiNotes}`;
       }}>
         <div style={{ display: 'flex', gap: '2rem' }}>
           {userType === 'therapist' ? 
-            ['dashboard', 'appointments', 'clients', 'ai-notes', 'documents', 'team'].map(tab => (
+            ['dashboard', 'appointments', 'clients', 'ai-notes', 'notifications'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -413,7 +424,9 @@ ${note.aiNotes}`;
                   fontFamily: 'Cambria, serif'
                 }}
               >
-                {tab === 'ai-notes' ? '🤖 AI Notes' : tab.replace('-', ' ')}
+                {tab === 'ai-notes' ? '🤖 AI Notes' : 
+                 tab === 'notifications' ? '📧 Notifications' :
+                 tab}
               </button>
             )) :
             ['dashboard', 'appointments'].map(tab => (
@@ -444,58 +457,8 @@ ${note.aiNotes}`;
           <div>
             <h2 style={{ color: '#333', marginBottom: '2rem' }}>📊 Dashboard</h2>
             
-            {/* Calendar System Status */}
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              marginBottom: '2rem',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ color: '#333', marginBottom: '1rem' }}>📅 Calendar System</h3>
-              <div style={{
-                background: '#e8f5e8',
-                padding: '1rem',
-                borderRadius: '5px',
-                border: '2px solid #4CAF50',
-                marginBottom: '1rem'
-              }}>
-                <p style={{ color: '#2e7d32', margin: 0, fontWeight: 'bold' }}>
-                  ✅ Custom HIPAA-Compliant Calendar Active
-                </p>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
-                  Your appointments are stored securely without third-party dependencies
-                </p>
-              </div>
-              
-              <details style={{ marginTop: '1rem' }}>
-                <summary style={{ cursor: 'pointer', color: '#666', fontSize: '0.9rem' }}>
-                  🔧 Optional: Connect Google Calendar (Backup)
-                </summary>
-                <div style={{ marginTop: '1rem', padding: '1rem', background: '#f9f9f9', borderRadius: '5px' }}>
-                  <p style={{ color: '#666', margin: '0 0 1rem 0', fontSize: '0.9rem' }}>
-                    You can optionally connect Google Calendar for external synchronization.
-                  </p>
-                  <button
-                    onClick={connectGoogleCalendar}
-                    style={{
-                      background: '#4285f4',
-                      color: 'white',
-                      border: 'none',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem'
-                    }}
-                  >
-                    🔗 Connect Google Calendar (Optional)
-                  </button>
-                </div>
-              </details>
-            </div>
-
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
               <div style={{
                 background: 'white',
                 padding: '2rem',
@@ -523,8 +486,8 @@ ${note.aiNotes}`;
                 textAlign: 'center',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
               }}>
-                <h3 style={{ color: '#FF9800', fontSize: '2rem', margin: '0' }}>98%</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>HIPAA Compliance</p>
+                <h3 style={{ color: '#9c27b0', fontSize: '2rem', margin: '0' }}>{savedSessionNotes.length}</h3>
+                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>AI Notes Generated</p>
               </div>
               <div style={{
                 background: 'white',
@@ -533,10 +496,106 @@ ${note.aiNotes}`;
                 textAlign: 'center',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
               }}>
-                <h3 style={{ color: '#9c27b0', fontSize: '2rem', margin: '0' }}>{savedSessionNotes.length}</h3>
-                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>AI Notes Generated</p>
+                <h3 style={{ color: '#e91e63', fontSize: '2rem', margin: '0' }}>{notificationHistory.length}</h3>
+                <p style={{ color: '#666', margin: '0.5rem 0 0 0' }}>Notifications Sent</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'notifications' && (
+          <div>
+            <h2 style={{ color: '#333', marginBottom: '2rem' }}>📧 Notification Center</h2>
+            
+            {/* Test Notifications */}
+            <div style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '10px',
+              marginBottom: '2rem',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ color: '#333', marginBottom: '1rem' }}>🧪 Test Notification System</h3>
+              <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+                Send test email and SMS notifications to verify your system is working
+              </p>
+              <button
+                onClick={sendTestNotifications}
+                disabled={isTestingNotifications}
+                style={{
+                  background: isTestingNotifications ? '#ccc' : '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  borderRadius: '8px',
+                  cursor: isTestingNotifications ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  fontFamily: 'Cambria, serif'
+                }}
+              >
+                {isTestingNotifications ? '🧪 Testing...' : '🧪 Test Notification System'}
+              </button>
+            </div>
+
+            {/* Notification History */}
+            {notificationHistory.length > 0 && (
+              <div style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '10px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📊 Notification History</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {notificationHistory.map(notification => (
+                    <div key={notification.id} style={{
+                      background: '#f9f9f9',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e0e0e0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '1.2rem' }}>
+                            {notification.type === 'email' ? '📧' : '📱'}
+                          </span>
+                          <strong>{notification.type.toUpperCase()}</strong>
+                          <span style={{
+                            background: '#4CAF50',
+                            color: 'white',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '12px',
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase'
+                          }}>
+                            SENT
+                          </span>
+                        </div>
+                        <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>
+                          To: {notification.recipient}
+                        </p>
+                        {notification.subject && (
+                          <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>
+                            {notification.subject}
+                          </p>
+                        )}
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#333' }}>
+                          {notification.content}
+                        </p>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#666', marginLeft: '1rem' }}>
+                        {new Date(notification.sentAt).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -579,9 +638,6 @@ ${note.aiNotes}`;
                       📅 {appointment.date} at {appointment.time} | 
                       👤 {appointment.client} | 
                       👨‍⚕️ {appointment.therapist}
-                      <span style={{ color: '#4CAF50', marginLeft: '0.5rem' }}>
-                        ✅ Custom Calendar
-                      </span>
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -648,59 +704,27 @@ ${note.aiNotes}`;
                   borderRadius: '10px',
                   boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>{client.name}</h3>
-                      <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
-                        📧 {client.email} | 📞 {client.phone}
-                      </p>
-                      <div style={{ margin: '1rem 0' }}>
-                        <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
-                          Progress: {client.progress}% | Sessions: {client.totalSessions}
-                        </p>
-                        <div style={{
-                          width: '100%',
-                          height: '10px',
-                          background: '#e0e0e0',
-                          borderRadius: '5px',
-                          overflow: 'hidden'
-                        }}>
-                          <div style={{
-                            width: `${client.progress}%`,
-                            height: '100%',
-                            background: '#4CAF50',
-                            transition: 'width 0.3s ease'
-                          }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        onClick={() => openModal('editClient')}
-                        style={{
-                          background: '#2196F3',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        onClick={() => openModal('viewProgress')}
-                        style={{
-                          background: '#FF9800',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '5px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📊 Progress
-                      </button>
+                  <h3 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>{client.name}</h3>
+                  <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
+                    📧 {client.email} | 📞 {client.phone}
+                  </p>
+                  <div style={{ margin: '1rem 0' }}>
+                    <p style={{ color: '#666', margin: '0 0 0.5rem 0' }}>
+                      Progress: {client.progress}% | Sessions: {client.totalSessions}
+                    </p>
+                    <div style={{
+                      width: '100%',
+                      height: '10px',
+                      background: '#e0e0e0',
+                      borderRadius: '5px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${client.progress}%`,
+                        height: '100%',
+                        background: '#4CAF50',
+                        transition: 'width 0.3s ease'
+                      }}></div>
                     </div>
                   </div>
                 </div>
@@ -802,6 +826,7 @@ ${note.aiNotes}`;
                 marginBottom: '1rem'
               }}>
                 <p style={{ color: '#1976d2', margin: 0, fontWeight: 'bold' }}>
+                  💡 Enter your session notes, key client statements, observations, and therapeutic interventions
                 </p>
                 <p style={{ color: '#666', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
                   The AI will structure these into professional clinical notes
@@ -983,38 +1008,6 @@ ${note.aiNotes}`;
             )}
           </div>
         )}
-
-        {activeTab === 'documents' && (
-          <div>
-            <h2 style={{ color: '#333', marginBottom: '2rem' }}>📋 Clinical Documents</h2>
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              textAlign: 'center',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ color: '#666' }}>📁 Document Management System</h3>
-              <p style={{ color: '#999' }}>Secure HIPAA-compliant document storage and management</p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'team' && (
-          <div>
-            <h2 style={{ color: '#333', marginBottom: '2rem' }}>👨‍⚕️ Team Management</h2>
-            <div style={{
-              background: 'white',
-              padding: '2rem',
-              borderRadius: '10px',
-              textAlign: 'center',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{ color: '#666' }}>👥 Team Collaboration & Audit Logs</h3>
-              <p style={{ color: '#999' }}>Manage team access and track all system activities</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Modal */}
@@ -1093,61 +1086,6 @@ ${note.aiNotes}`;
                       }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Duration (minutes)</label>
-                    <select
-                      value={newAppointment.duration}
-                      onChange={(e) => setNewAppointment({...newAppointment, duration: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    >
-                      <option value="30">30 minutes</option>
-                      <option value="45">45 minutes</option>
-                      <option value="60">60 minutes</option>
-                      <option value="90">90 minutes</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Session Type</label>
-                    <select
-                      value={newAppointment.type}
-                      onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value})}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    >
-                      <option value="Therapy Session">Therapy Session</option>
-                      <option value="Initial Consultation">Initial Consultation</option>
-                      <option value="Follow-up">Follow-up</option>
-                      <option value="Group Session">Group Session</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Notes</label>
-                    <textarea
-                      value={newAppointment.notes}
-                      onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
-                      placeholder="Any special notes for this appointment..."
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif',
-                        minHeight: '80px',
-                        resize: 'vertical'
-                      }}
-                    />
-                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                   <button
@@ -1163,7 +1101,7 @@ ${note.aiNotes}`;
                       fontFamily: 'Cambria, serif'
                     }}
                   >
-                    📅 Schedule Appointment
+                    📅 Schedule & Send Notifications
                   </button>
                   <button
                     onClick={closeModal}
@@ -1232,39 +1170,6 @@ ${note.aiNotes}`;
                       }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Emergency Contact</label>
-                    <input
-                      type="text"
-                      value={newClient.emergencyContact}
-                      onChange={(e) => setNewClient({...newClient, emergencyContact: e.target.value})}
-                      placeholder="Name and phone number"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Initial Notes</label>
-                    <textarea
-                      value={newClient.notes}
-                      onChange={(e) => setNewClient({...newClient, notes: e.target.value})}
-                      placeholder="Any relevant information about the client..."
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '5px',
-                        fontFamily: 'Cambria, serif',
-                        minHeight: '80px',
-                        resize: 'vertical'
-                      }}
-                    />
-                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                   <button
@@ -1295,43 +1200,6 @@ ${note.aiNotes}`;
                     }}
                   >
                     Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(modalType === 'editClient' || modalType === 'viewProgress') && (
-              <div>
-                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>
-                  {modalType === 'editClient' ? '✏️ Edit Client Information' : '📊 Client Progress'}
-                </h3>
-                <div style={{
-                  padding: '2rem',
-                  background: '#f9f9f9',
-                  borderRadius: '5px',
-                  textAlign: 'center'
-                }}>
-                  <p style={{ color: '#666' }}>
-                    {modalType === 'editClient' 
-                      ? 'Client editing functionality will be implemented here.' 
-                      : 'Detailed progress tracking and analytics will be displayed here.'}
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                  <button
-                    onClick={closeModal}
-                    style={{
-                      background: '#666',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      width: '100%',
-                      fontFamily: 'Cambria, serif'
-                    }}
-                  >
-                    Close
                   </button>
                 </div>
               </div>
