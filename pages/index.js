@@ -16,7 +16,7 @@ export default function Home() {
   const GOOGLE_CLIENT_ID = 'your-actual-client-id.apps.googleusercontent.com';
   const GOOGLE_API_KEY = 'your-actual-api-key';
   const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
-  const SCOPES = 'https://www.googleapis.com/auth/calendar';
+  const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
   const [appointments, setAppointments] = useState([
     {
