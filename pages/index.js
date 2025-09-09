@@ -523,6 +523,282 @@ export default function Home() {
           </div>
         )}
 
+        {activeTab === 'ai-notes' && userType === 'therapist' && (
+          <div>
+            <h2 style={{ color: '#333', marginBottom: '2rem' }}>🤖 AI Clinical Notes</h2>
+            
+            {/* Session Setup */}
+            <div style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '10px',
+              marginBottom: '2rem',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📋 Session Information</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
+                    Client Name
+                  </label>
+                  <select
+                    value={currentNoteClient}
+                    onChange={(e) => setCurrentNoteClient(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '5px',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    <option value="Sarah Johnson">Sarah Johnson</option>
+                    <option value="Michael Chen">Michael Chen</option>
+                    <option value="Emily Rodriguez">Emily Rodriguez</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
+                    Session Type
+                  </label>
+                  <select
+                    value={currentSessionType}
+                    onChange={(e) => setCurrentSessionType(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '5px',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    <option value="Therapy Session">General Therapy</option>
+                    <option value="CBT Session">CBT Session</option>
+                    <option value="Trauma Therapy">Trauma Therapy</option>
+                    <option value="Initial Consultation">Initial Consultation</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
+                    Session Date
+                  </label>
+                  <input
+                    type="date"
+                    value={currentSessionDate}
+                    onChange={(e) => setCurrentSessionDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '5px',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Session Notes Input */}
+            <div style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '10px',
+              marginBottom: '2rem',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{ color: '#333', marginBottom: '1rem' }}>📝 Session Documentation</h3>
+              
+              <div style={{
+                background: '#e3f2fd',
+                padding: '1rem',
+                borderRadius: '5px',
+                border: '1px solid #2196F3',
+                marginBottom: '1rem'
+              }}>
+                <p style={{ color: '#1976d2', margin: 0, fontWeight: 'bold' }}>
+                  💡 Enter your session notes, key client statements, observations, and therapeutic interventions
+                </p>
+                <p style={{ color: '#666', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                  The AI will structure these into professional clinical notes
+                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333', fontWeight: 'bold' }}>
+                  Session Notes & Observations
+                </label>
+                <textarea
+                  value={aiTranscript}
+                  onChange={(e) => setAiTranscript(e.target.value)}
+                  placeholder="Enter your session notes here... Include:&#10;• Key client statements and concerns&#10;• Therapeutic interventions used&#10;• Client responses and engagement level&#10;• Behavioral observations&#10;• Progress toward treatment goals&#10;• Any homework or action items discussed"
+                  style={{
+                    width: '100%',
+                    minHeight: '200px',
+                    padding: '1rem',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    fontFamily: 'Cambria, serif',
+                    fontSize: '1rem',
+                    lineHeight: '1.6',
+                    resize: 'vertical'
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                  <span style={{ color: '#666', fontSize: '0.8rem' }}>
+                    {aiTranscript.length} characters
+                  </span>
+                  <button
+                    onClick={generateAINotes}
+                    disabled={isProcessingNotes || !aiTranscript.trim()}
+                    style={{
+                      background: isProcessingNotes ? '#ccc' : '#2196F3',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      cursor: isProcessingNotes ? 'not-allowed' : 'pointer',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    {isProcessingNotes ? '🤖 Generating Notes...' : '🤖 Generate AI Notes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Generated Notes */}
+            {aiNotes && (
+              <div style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '10px',
+                marginBottom: '2rem',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ color: '#333', marginBottom: '1rem' }}>🤖 AI Generated Clinical Notes</h3>
+                <div style={{
+                  background: '#f9f9f9',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid #e0e0e0',
+                  maxHeight: '500px',
+                  overflow: 'auto'
+                }}>
+                  <pre style={{ 
+                    margin: 0, 
+                    whiteSpace: 'pre-wrap', 
+                    fontFamily: 'Cambria, serif',
+                    lineHeight: '1.6',
+                    fontSize: '0.95rem'
+                  }}>
+                    {aiNotes}
+                  </pre>
+                </div>
+                
+                <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <button
+                    onClick={saveSessionNotes}
+                    style={{
+                      background: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      padding: '1rem 2rem',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    💾 Save Notes
+                  </button>
+                  <button
+                    onClick={() => setAiNotes('')}
+                    style={{
+                      background: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      padding: '1rem 2rem',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      cursor: 'pointer',
+                      fontFamily: 'Cambria, serif'
+                    }}
+                  >
+                    🗑️ Clear Notes
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Session Notes History */}
+            {sessionNotes.length > 0 && (
+              <div style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '10px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+              }}>
+                <h3 style={{ color: '#333', marginBottom: '1.5rem' }}>📚 Session Notes History</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {sessionNotes.map(note => (
+                    <div key={note.id} style={{
+                      background: '#f9f9f9',
+                      padding: '1.5rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e0e0e0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div>
+                          <h4 style={{ color: '#333', margin: '0 0 0.5rem 0' }}>
+                            {note.client} - {note.type}
+                          </h4>
+                          <p style={{ color: '#666', margin: 0, fontSize: '0.9rem' }}>
+                            📅 {note.date} | ⏰ {new Date(note.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => exportSessionNotes(note)}
+                          style={{
+                            background: '#2196F3',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem'
+                          }}
+                        >
+                          📄 Export
+                        </button>
+                      </div>
+                      
+                      <div style={{
+                        background: 'white',
+                        padding: '1rem',
+                        borderRadius: '5px',
+                        maxHeight: '200px',
+                        overflow: 'auto'
+                      }}>
+                        <pre style={{ 
+                          margin: 0, 
+                          whiteSpace: 'pre-wrap', 
+                          fontFamily: 'Cambria, serif',
+                          fontSize: '0.9rem',
+                          lineHeight: '1.5'
+                        }}>
+                          {note.notes}
+                        </pre>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'appointments' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
