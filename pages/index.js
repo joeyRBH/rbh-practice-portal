@@ -1,4 +1,480 @@
-import React, { useState, useEffect } from 'react';
+</div>
+          )}
+
+        </main>
+
+        {/* Client Chart Modal */}
+        {showClientChart && selectedClient && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 2000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '30px',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h2>📋 Client Chart: {selectedClient.legalFirstName} {selectedClient.legalLastName}</h2>
+                <button
+                  onClick={closeClientChart}
+                  style={{
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    cursor: 'pointer',
+                    fontSize: '20px'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Client Information */}
+              <div style={{
+                background: '#f8f9fa',
+                padding: '20px',
+                borderRadius: '15px',
+                marginBottom: '25px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3>👤 Client Information</h3>
+                  <button
+                    onClick={() => setEditingClient(!editingClient)}
+                    style={{
+                      padding: '8px 16px',
+                      background: editingClient ? '#10b981' : '#667eea',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {editingClient ? '💾 Save Changes' : '✏️ Edit Info'}
+                  </button>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '15px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Legal First Name:</label>
+                    {editingClient ? (
+                      <input
+                        type="text"
+                        value={selectedClient.legalFirstName}
+                        onChange={(e) => setSelectedClient({...selectedClient, legalFirstName: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.legalFirstName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Legal Last Name:</label>
+                    {editingClient ? (
+                      <input
+                        type="text"
+                        value={selectedClient.legalLastName}
+                        onChange={(e) => setSelectedClient({...selectedClient, legalLastName: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.legalLastName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Email:</label>
+                    {editingClient ? (
+                      <input
+                        type="email"
+                        value={selectedClient.email}
+                        onChange={(e) => setSelectedClient({...selectedClient, email: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.email}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Phone:</label>
+                    {editingClient ? (
+                      <input
+                        type="tel"
+                        value={selectedClient.phone}
+                        onChange={(e) => setSelectedClient({...selectedClient, phone: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.phone}</p>
+                    )}
+                  </div>
+                  <div style={{ gridColumn: isMobile ? '1' : '1 / -1' }}>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Address:</label>
+                    {editingClient ? (
+                      <input
+                        type="text"
+                        value={selectedClient.address || ''}
+                        onChange={(e) => setSelectedClient({...selectedClient, address: e.target.value})}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    ) : (
+                      <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.address || 'Not provided'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Birthday:</label>
+                    <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.birthday || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Relationship Status:</label>
+                    <p style={{ margin: 0, padding: '8px 0' }}>{selectedClient.relationshipStatus || 'Not provided'}</p>
+                  </div>
+                </div>
+
+                {editingClient && (
+                  <button
+                    onClick={updateClient}
+                    style={{
+                      marginTop: '15px',
+                      padding: '10px 20px',
+                      background: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    💾 Update Client Information
+                  </button>
+                )}
+              </div>
+
+              {/* DAP Notes Section */}
+              <div style={{
+                background: '#f0f9ff',
+                padding: '20px',
+                borderRadius: '15px',
+                marginBottom: '25px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3>📝 DAP Clinical Notes</h3>
+                  <button
+                    onClick={() => setShowDAPForm(true)}
+                    style={{
+                      padding: '10px 16px',
+                      background: '#0ea5e9',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    ➕ Add DAP Note
+                  </button>
+                </div>
+
+                {/* DAP Notes List */}
+                {selectedClient.dapNotes && selectedClient.dapNotes.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {selectedClient.dapNotes.map(note => (
+                      <div key={note.id} style={{
+                        background: 'white',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <h4 style={{ margin: 0, color: '#0ea5e9' }}>Session: {note.date}</h4>
+                          <span style={{ fontSize: '12px', color: '#666' }}>
+                            {note.serviceCode} | {note.sessionLength} | By: {note.createdBy}
+                          </span>
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                          <strong>📊 Data:</strong>
+                          <p style={{ margin: '5px 0', fontSize: '14px' }}>{note.data}</p>
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                          <strong>🔍 Assessment:</strong>
+                          <p style={{ margin: '5px 0', fontSize: '14px' }}>{note.assessment}</p>
+                        </div>
+                        <div>
+                          <strong>📋 Plan:</strong>
+                          <p style={{ margin: '5px 0', fontSize: '14px' }}>{note.plan}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: '#666', fontStyle: 'italic' }}>No DAP notes recorded yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DAP Note Form Modal */}
+        {showDAPForm && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            zIndex: 2001,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '15px',
+              padding: '30px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <h3>📝 Add DAP Clinical Note</h3>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '15px',
+                  marginBottom: '20px'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Session Date:</label>
+                    <input
+                      type="date"
+                      value={currentDAPNote.date}
+                      onChange={(e) => setCurrentDAPNote({...currentDAPNote, date: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #ccc',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Session Length:</label>
+                    <select
+                      value={currentDAPNote.sessionLength}
+                      onChange={(e) => setCurrentDAPNote({...currentDAPNote, sessionLength: e.target.value})}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #ccc',
+                        borderRadius: '8px',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <option value="">Select Duration</option>
+                      <option value="45 minutes">45 minutes</option>
+                      <option value="50 minutes">50 minutes</option>
+                      <option value="60 minutes">60 minutes</option>
+                      <option value="90 minutes">90 minutes</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Service Code:</label>
+                  <select
+                    value={currentDAPNote.serviceCode}
+                    onChange={(e) => setCurrentDAPNote({...currentDAPNote, serviceCode: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="">Select Service Code</option>
+                    <option value="90837">90837 - Psychotherapy, 60 minutes</option>
+                    <option value="90834">90834 - Psychotherapy, 45 minutes</option>
+                    <option value="90791">90791 - Psychiatric Diagnostic Evaluation</option>
+                    <option value="90853">90853 - Group Psychotherapy</option>
+                    <option value="90846">90846 - Family Therapy without Patient</option>
+                    <option value="90847">90847 - Family Therapy with Patient</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>📊 Data (Objective observations):</label>
+                  <textarea
+                    value={currentDAPNote.data}
+                    onChange={(e) => setCurrentDAPNote({...currentDAPNote, data: e.target.value})}
+                    placeholder="Describe what you observed during the session..."
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>🔍 Assessment (Clinical impression):</label>
+                  <textarea
+                    value={currentDAPNote.assessment}
+                    onChange={(e) => setCurrentDAPNote({...currentDAPNote, assessment: e.target.value})}
+                    placeholder="Your clinical assessment and interpretation..."
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>📋 Plan (Treatment plan and next steps):</label>
+                  <textarea
+                    value={currentDAPNote.plan}
+                    onChange={(e) => setCurrentDAPNote({...currentDAPNote, plan: e.target.value})}
+                    placeholder="Treatment plan, homework, next session goals..."
+                    rows="4"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowDAPForm(false)}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addDAPNote}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#0ea5e9',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📝 Save DAP Note
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        </main>
+
+        {/* Client Chart Modal */}
+        {showClientChart && selectedClient && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 2000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '30px',
+              maxWidth: '900px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h2>📋 Client Chart: {selectedClient.legalFirstName} {selectedClient.legalLastName}</h2>
+                <button
+                import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function HIPAAPortal() {
