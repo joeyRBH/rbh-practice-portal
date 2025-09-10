@@ -663,7 +663,299 @@ export default function HIPAAPortal() {
 
         </main>
 
-        {/* Client Chart Modal */}
+        {/* Appointment Scheduler Modal */}
+        {showScheduler && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 2000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '20px',
+              padding: '30px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h2>📅 Schedule New Appointment</h2>
+                <button
+                  onClick={() => setShowScheduler(false)}
+                  style={{
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '40px',
+                    height: '40px',
+                    cursor: 'pointer',
+                    fontSize: '20px'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                  👤 Select Client *
+                </label>
+                <select
+                  value={newAppointment.clientId}
+                  onChange={(e) => setNewAppointment({...newAppointment, clientId: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
+                    fontSize: '16px'
+                  }}
+                >
+                  <option value="">Choose a client...</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.firstName} {client.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '20px',
+                flexDirection: isMobile ? 'column' : 'row'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                    📅 Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={(e) => {
+                      setNewAppointment({...newAppointment, date: e.target.value});
+                      setSelectedDate(e.target.value);
+                    }}
+                    min={new Date().toISOString().split('T')[0]}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      fontSize: '16px'
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                    🕐 Time *
+                  </label>
+                  <select
+                    value={newAppointment.time}
+                    onChange={(e) => setNewAppointment({...newAppointment, time: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <option value="">Select time...</option>
+                    {selectedDate && getAvailableTimeSlots(selectedDate).map(time => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                marginBottom: '20px',
+                flexDirection: isMobile ? 'column' : 'row'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                    ⏱️ Duration
+                  </label>
+                  <select
+                    value={newAppointment.duration}
+                    onChange={(e) => setNewAppointment({...newAppointment, duration: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <option value="30">30 minutes</option>
+                    <option value="45">45 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="90">90 minutes</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                    📋 Service Code
+                  </label>
+                  <select
+                    value={newAppointment.serviceCode}
+                    onChange={(e) => setNewAppointment({...newAppointment, serviceCode: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ccc',
+                      borderRadius: '8px',
+                      boxSizing: 'border-box',
+                      fontSize: '16px'
+                    }}
+                  >
+                    <option value="90837">90837 - Psychotherapy, 60 min</option>
+                    <option value="90834">90834 - Psychotherapy, 45 min</option>
+                    <option value="90791">90791 - Psychiatric Evaluation</option>
+                    <option value="90853">90853 - Group Therapy</option>
+                    <option value="90846">90846 - Family Therapy (no patient)</option>
+                    <option value="90847">90847 - Family Therapy (with patient)</option>
+                    <option value="99205">99205 - New Patient Visit</option>
+                    <option value="99214">99214 - Established Patient Visit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                  📝 Appointment Type
+                </label>
+                <select
+                  value={newAppointment.type}
+                  onChange={(e) => setNewAppointment({...newAppointment, type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
+                    fontSize: '16px'
+                  }}
+                >
+                  <option value="Therapy Session">Therapy Session</option>
+                  <option value="Initial Consultation">Initial Consultation</option>
+                  <option value="Follow-up Session">Follow-up Session</option>
+                  <option value="Group Therapy">Group Therapy</option>
+                  <option value="Family Therapy">Family Therapy</option>
+                  <option value="Assessment">Assessment</option>
+                  <option value="Intake Appointment">Intake Appointment</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '8px' }}>
+                  📝 Notes (Optional)
+                </label>
+                <textarea
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment({...newAppointment, notes: e.target.value})}
+                  placeholder="Add any notes for this appointment..."
+                  rows="3"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
+                    fontSize: '16px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              {/* Available Time Slots Preview */}
+              {selectedDate && (
+                <div style={{
+                  background: '#f8f9fa',
+                  padding: '15px',
+                  borderRadius: '10px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ margin: '0 0 10px 0' }}>⏰ Available Times for {selectedDate}</h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {getAvailableTimeSlots(selectedDate).slice(0, 12).map(time => (
+                      <button
+                        key={time}
+                        onClick={() => setNewAppointment({...newAppointment, time: time})}
+                        style={{
+                          padding: '6px 12px',
+                          background: newAppointment.time === time ? '#667eea' : '#e5e7eb',
+                          color: newAppointment.time === time ? 'white' : '#374151',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                  {getAvailableTimeSlots(selectedDate).length > 12 && (
+                    <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#666' }}>
+                      +{getAvailableTimeSlots(selectedDate).length - 12} more slots available
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowScheduler(false)}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={scheduleAppointment}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📅 Schedule Appointment
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {showChart && selectedClient && (
           <div style={{
             position: 'fixed',
