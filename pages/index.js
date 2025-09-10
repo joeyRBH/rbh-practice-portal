@@ -1,3 +1,4 @@
+// pages/index.js
 import { useState, useEffect } from 'react';
 
 export default function MindCarePortalGmailIntegration() {
@@ -19,7 +20,7 @@ export default function MindCarePortalGmailIntegration() {
   // Google OAuth configuration
   // Updated with actual Client ID from Google Cloud Console
   const GOOGLE_CLIENT_ID = '940233544658-rbhdvbt2l825ae83bagpiqn83c79e65c.apps.googleusercontent.com';
-  const GOOGLE_REDIRECT_URI = window.location.origin;
+  const GOOGLE_REDIRECT_URI = typeof window !== 'undefined' ? window.location.origin : '';
   const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email';
   
   // Appointment and client data
@@ -95,6 +96,7 @@ Note: This communication is confidential and protected under HIPAA.`
 
   // Google OAuth helper functions
   const generateCodeVerifier = () => {
+    if (typeof window === 'undefined') return '';
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
     return btoa(String.fromCharCode.apply(null, Array.from(array)))
@@ -104,6 +106,7 @@ Note: This communication is confidential and protected under HIPAA.`
   };
 
   const generateCodeChallenge = async (verifier) => {
+    if (typeof window === 'undefined') return '';
     const encoder = new TextEncoder();
     const data = encoder.encode(verifier);
     const digest = await crypto.subtle.digest('SHA-256', data);
@@ -115,6 +118,8 @@ Note: This communication is confidential and protected under HIPAA.`
 
   // Real Google OAuth connection
   const connectGmail = async () => {
+    if (typeof window === 'undefined') return;
+    
     setIsTestingEmail(true);
     setEmailStatus('Connecting...');
     
@@ -227,6 +232,7 @@ Note: This communication is confidential and protected under HIPAA.`
 
   // Check for OAuth redirect on component mount
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const urlParams = new URLSearchParams(window.location.search);
     const authCode = urlParams.get('code');
     
@@ -775,56 +781,6 @@ Note: This communication is confidential and protected under HIPAA.`
                   )}
                 </div>
               </div>
-
-              {/* OAuth Setup Instructions */}
-              {!gmailConnected && (
-                <div style={{
-                  padding: '1.5rem',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '8px',
-                  marginTop: '1rem'
-                }}>
-                  <h4 style={{ margin: '0 0 1rem 0', color: '#1e40af' }}>🛠️ Google Cloud Console Setup</h4>
-                  <div style={{ fontSize: '0.875rem', color: '#1e40af', lineHeight: '1.6' }}>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>1.</strong> Go to <a href="https://console.cloud.google.com/" target="_blank" style={{ color: '#2563eb' }}>Google Cloud Console</a>
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>2.</strong> Create a new project or select existing one
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>3.</strong> Go to <strong>APIs & Services</strong> → <strong>Library</strong> → Enable <strong>Gmail API</strong>
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>4.</strong> Go to <strong>APIs & Services</strong> → <strong>Credentials</strong> → <strong>Create Credentials</strong> → <strong>OAuth 2.0 Client ID</strong>
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>5.</strong> Choose <strong>Web application</strong> as application type
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>6.</strong> Add authorized redirect URI: <code style={{ backgroundColor: '#e0e7ff', padding: '0.25rem', borderRadius: '4px' }}>{GOOGLE_REDIRECT_URI}</code>
-                    </p>
-                    <p style={{ margin: '0 0 0.5rem 0' }}>
-                      <strong>7.</strong> Copy your Client ID and update the code:
-                    </p>
-                    <div style={{ 
-                      backgroundColor: '#1f2937', 
-                      color: '#f9fafb', 
-                      padding: '1rem', 
-                      borderRadius: '6px',
-                      fontFamily: 'monospace',
-                      fontSize: '0.75rem',
-                      margin: '0.5rem 0',
-                      overflowX: 'auto'
-                    }}>
-                      const GOOGLE_CLIENT_ID = 'YOUR_ACTUAL_CLIENT_ID.apps.googleusercontent.com';
-                    </div>
-                    <p style={{ margin: 0, fontStyle: 'italic', color: '#dc2626' }}>
-                      ⚠️ <strong>Current Status:</strong> Using your configured Client ID. Ready to connect!
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* Current Configuration Display */}
               <div style={{
