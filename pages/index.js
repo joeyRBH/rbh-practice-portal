@@ -1,4 +1,75 @@
-import React, { useState, useEffect } from 'react';
+{activeTab === 'notes' && (
+            <div style={{
+              background: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(10px)',
+              borderRadius: '20px',
+              padding: '30px'
+            }}>
+              <h2>🤖 AI Clinical Notes</h2>
+              
+              {/* Full Session Recording */}
+              <div style={{
+                background: isRecordingSession ? '#fef2f2' : '#f8f9fa',
+                border: isRecordingSession ? '2px solid #ef4444' : '1px solid #e5e7eb',
+                padding: '25px',
+                borderRadius: '15px',
+                marginBottom: '25px'
+              }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  🎙️ Full Session Recording
+                </h3>
+                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                  Record your entire therapy session. AI will analyze the full conversation and generate comprehensive clinical notes.
+                </p>
+                
+                {!isRecordingSession ? (
+                  <button
+                    onClick={startSessionRecording}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    🔴 START SESSION RECORDING
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{
+                      background: '#fef2f2',
+                      border: '2px solid #fecaca',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '16px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        color: '#dc2626',
+                        marginBottom: '8px'
+                      }}>
+                        🔴 RECORDING SESSION
+                      </div>
+                      <div style={{
+                        fontSize: '32px',
+                        fontWeight: 'bold',
+                        fontFamily: 'monospace',
+                        color: '#dc2626'
+                      }}>
+                        {formatDuration(recordingDuration)}
+                      </div>
+                      <p style={{ fontSize: '14px', color: '#991b1b', margin: 'import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function HIPAAPortal() {
