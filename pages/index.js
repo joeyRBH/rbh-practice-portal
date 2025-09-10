@@ -842,8 +842,8 @@ export default function HIPAAPortal() {
               
               <div style={{ marginBottom: '20px' }}>
                 <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
                   gap: '15px',
                   marginBottom: '20px'
                 }}>
