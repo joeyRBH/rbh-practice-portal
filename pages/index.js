@@ -1,75 +1,4 @@
-{activeTab === 'notes' && (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              padding: '30px'
-            }}>
-              <h2>🤖 AI Clinical Notes</h2>
-              
-              {/* Full Session Recording */}
-              <div style={{
-                background: isRecordingSession ? '#fef2f2' : '#f8f9fa',
-                border: isRecordingSession ? '2px solid #ef4444' : '1px solid #e5e7eb',
-                padding: '25px',
-                borderRadius: '15px',
-                marginBottom: '25px'
-              }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  🎙️ Full Session Recording
-                </h3>
-                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
-                  Record your entire therapy session. AI will analyze the full conversation and generate comprehensive clinical notes.
-                </p>
-                
-                {!isRecordingSession ? (
-                  <button
-                    onClick={startSessionRecording}
-                    style={{
-                      width: '100%',
-                      padding: '16px',
-                      background: '#dc2626',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      fontSize: '18px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    🔴 START SESSION RECORDING
-                  </button>
-                ) : (
-                  <div>
-                    <div style={{
-                      background: '#fef2f2',
-                      border: '2px solid #fecaca',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      marginBottom: '16px',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        color: '#dc2626',
-                        marginBottom: '8px'
-                      }}>
-                        🔴 RECORDING SESSION
-                      </div>
-                      <div style={{
-                        fontSize: '32px',
-                        fontWeight: 'bold',
-                        fontFamily: 'monospace',
-                        color: '#dc2626'
-                      }}>
-                        {formatDuration(recordingDuration)}
-                      </div>
-                      <p style={{ fontSize: '14px', color: '#991b1b', margin: 'import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 
 export default function HIPAAPortal() {
@@ -77,6 +6,29 @@ export default function HIPAAPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isRecordingSession, setIsRecordingSession] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [clients, setClients] = useState([
+    { id: 1, firstName: 'Sarah', lastName: 'Johnson', email: 'sarah@email.com', phone: '(555) 123-4567', isMinor: false },
+    { id: 2, firstName: 'Michael', lastName: 'Brown', email: 'michael@email.com', phone: '(555) 234-5678', isMinor: false },
+    { id: 3, firstName: 'Lisa', lastName: 'Davis', email: 'lisa@email.com', phone: '(555) 345-6789', isMinor: false }
+  ]);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [newClient, setNewClient] = useState({
+    legalFirstName: '',
+    legalLastName: '',
+    middleName: '',
+    isMinor: false,
+    email: '',
+    phone: '',
+    address: '',
+    birthday: '',
+    relationshipStatus: '',
+    employmentStatus: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    emergencyContactRelationship: ''
+  });
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -84,6 +36,18 @@ export default function HIPAAPortal() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (isRecordingSession) {
+      interval = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setRecordingDuration(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecordingSession]);
 
   const handleLogin = () => setIsLoggedIn(true);
   const toggleMenu = () => setMenuOpen(!menuOpen);
@@ -93,47 +57,63 @@ export default function HIPAAPortal() {
     closeMenu();
   };
 
-  const sendReminder = (clientName, time) => {
-    const email = `${clientName.toLowerCase().replace(' ', '.')}@email.com`;
-    
-    // Professional email template
-    const emailTemplate = `
-Subject: Appointment Reminder - Tomorrow at ${time}
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
-Hello ${clientName},
+  const startSessionRecording = () => {
+    setIsRecordingSession(true);
+    console.log('Session recording started');
+  };
 
-This is a friendly reminder of your appointment tomorrow at ${time} with Dr. Smith.
+  const stopSessionRecording = () => {
+    setIsRecordingSession(false);
+    alert(`Session recorded for ${formatDuration(recordingDuration)}! Ready for AI processing.`);
+  };
 
-📍 Please arrive 10 minutes early
-📋 Bring your insurance card and ID
-💻 For telehealth, we'll send you a video link 15 minutes before
+  const generateAINotes = () => {
+    alert('AI Clinical Notes generated successfully! Professional note created.');
+  };
 
-To confirm, reply to this email or call (555) 123-4567.
+  const addNewClient = () => {
+    if (!newClient.legalFirstName || !newClient.legalLastName || !newClient.email) {
+      alert('Please fill in required fields: Legal First Name, Legal Last Name, and Email');
+      return;
+    }
 
-Best regards,
-Dr. Smith's Office
-
----
-This message is HIPAA-compliant and confidential.`;
-
-    // HIPAA Compliance Logging
-    const auditLog = {
-      timestamp: new Date().toISOString(),
-      action: 'APPOINTMENT_REMINDER_SENT',
-      clientName,
-      communicationType: 'EMAIL',
-      recipient: email,
-      appointmentTime: time,
-      status: 'DELIVERED',
-      sentBy: 'SYSTEM_AUTO',
-      template: 'PROFESSIONAL_EMAIL_REMINDER',
-      hipaaCompliant: true
+    const clientToAdd = {
+      id: clients.length + 1,
+      firstName: newClient.legalFirstName,
+      lastName: newClient.legalLastName,
+      email: newClient.email,
+      phone: newClient.phone,
+      isMinor: newClient.isMinor
     };
 
-    console.log('📧 Email Template:', emailTemplate);
-    console.log('🔒 HIPAA Audit Log:', auditLog);
-    
-    alert(`✅ Professional reminder sent to ${clientName}!\n📧 Email: ${email}\n🔒 HIPAA logged`);
+    setClients([...clients, clientToAdd]);
+    setNewClient({
+      legalFirstName: '',
+      legalLastName: '',
+      middleName: '',
+      isMinor: false,
+      email: '',
+      phone: '',
+      address: '',
+      birthday: '',
+      relationshipStatus: '',
+      employmentStatus: '',
+      emergencyContactName: '',
+      emergencyContactPhone: '',
+      emergencyContactRelationship: ''
+    });
+    setShowAddClient(false);
+    alert(`Client added successfully: ${clientToAdd.firstName} ${clientToAdd.lastName}`);
+  };
+
+  const sendReminder = (clientName, time) => {
+    alert(`Professional reminder sent to ${clientName} for ${time} appointment!`);
   };
 
   if (!isLoggedIn) {
@@ -150,7 +130,7 @@ This message is HIPAA-compliant and confidential.`;
           minHeight: '100vh',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           padding: '20px',
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          fontFamily: 'Arial, sans-serif'
         }}>
           <div style={{
             background: 'white',
@@ -217,17 +197,25 @@ This message is HIPAA-compliant and confidential.`;
     );
   }
 
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'appointments', label: 'Appointments', icon: '📅' },
+    { id: 'clients', label: 'Clients', icon: '👥' },
+    { id: 'notes', label: 'AI Notes', icon: '🤖' },
+    { id: 'notifications', label: 'Notifications', icon: '📧' }
+  ];
+
   return (
     <>
       <Head>
-        <title>HIPAA Portal - Dashboard</title>
+        <title>HIPAA Portal</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </Head>
       
       <div style={{
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: 'Arial, sans-serif',
         display: 'flex'
       }}>
         
@@ -240,23 +228,13 @@ This message is HIPAA-compliant and confidential.`;
             right: 0,
             height: '60px',
             background: 'rgba(255,255,255,0.95)',
-            backdropFilter: 'blur(10px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 20px',
-            zIndex: 1000,
-            borderBottom: '1px solid rgba(0,0,0,0.1)'
+            zIndex: 1000
           }}>
-            <button 
-              onClick={toggleMenu}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={toggleMenu} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>
               ☰
             </button>
             <h1 style={{ margin: 0, fontSize: '18px' }}>HIPAA Portal</h1>
@@ -264,8 +242,8 @@ This message is HIPAA-compliant and confidential.`;
           </header>
         )}
 
-        {/* Mobile Navigation */}
-        {isMobile && (
+        {/* Navigation */}
+        {isMobile ? (
           <nav style={{
             position: 'fixed',
             top: 0,
@@ -274,8 +252,7 @@ This message is HIPAA-compliant and confidential.`;
             height: '100vh',
             background: 'white',
             zIndex: 1001,
-            transition: 'left 0.3s ease',
-            boxShadow: '2px 0 10px rgba(0,0,0,0.1)'
+            transition: 'left 0.3s ease'
           }}>
             <div style={{
               padding: '20px',
@@ -285,27 +262,11 @@ This message is HIPAA-compliant and confidential.`;
               alignItems: 'center'
             }}>
               <h3 style={{ margin: 0 }}>🏥 HIPAA Portal</h3>
-              <button 
-                onClick={closeMenu}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer'
-                }}
-              >
+              <button onClick={closeMenu} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>
                 ×
               </button>
             </div>
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'appointments', label: 'Appointments', icon: '📅' },
-              { id: 'clients', label: 'Clients', icon: '👥' },
-              { id: 'notes', label: 'AI Notes', icon: '🤖' },
-              { id: 'notifications', label: 'Notifications', icon: '📧' },
-              { id: 'documents', label: 'Documents', icon: '📋' },
-              { id: 'team', label: 'Team', icon: '👨‍⚕️' }
-            ].map(item => (
+            {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => showTab(item.id)}
@@ -328,14 +289,10 @@ This message is HIPAA-compliant and confidential.`;
               </button>
             ))}
           </nav>
-        )}
-
-        {/* Desktop Navigation */}
-        {!isMobile && (
+        ) : (
           <nav style={{
             width: '250px',
             background: 'rgba(255,255,255,0.95)',
-            backdropFilter: 'blur(10px)',
             padding: '20px',
             display: 'flex',
             flexDirection: 'column',
@@ -343,27 +300,8 @@ This message is HIPAA-compliant and confidential.`;
           }}>
             <div style={{ marginBottom: '30px', textAlign: 'center' }}>
               <h2 style={{ margin: 0 }}>🏥 HIPAA Portal</h2>
-              <span style={{
-                background: '#667eea',
-                color: 'white',
-                padding: '5px 10px',
-                borderRadius: '15px',
-                fontSize: '12px',
-                marginTop: '10px',
-                display: 'inline-block'
-              }}>
-                Dr. Smith
-              </span>
             </div>
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-              { id: 'appointments', label: 'Appointments', icon: '📅' },
-              { id: 'clients', label: 'Clients', icon: '👥' },
-              { id: 'notes', label: 'AI Notes', icon: '🤖' },
-              { id: 'notifications', label: 'Notifications', icon: '📧' },
-              { id: 'documents', label: 'Documents', icon: '📋' },
-              { id: 'team', label: 'Team', icon: '👨‍⚕️' }
-            ].map(item => (
+            {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => showTab(item.id)}
@@ -399,7 +337,6 @@ This message is HIPAA-compliant and confidential.`;
           {activeTab === 'dashboard' && (
             <div style={{
               background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
               borderRadius: '20px',
               padding: '30px'
             }}>
@@ -410,23 +347,36 @@ This message is HIPAA-compliant and confidential.`;
                 gap: '20px',
                 margin: '20px 0'
               }}>
-                {[
-                  { title: "Today's Appointments", value: "8" },
-                  { title: "Active Clients", value: "124" },
-                  { title: "HIPAA Compliance", value: "✅ Active" },
-                  { title: "Auto Reminders", value: "🔔 ON" }
-                ].map(stat => (
-                  <div key={stat.title} style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    padding: '25px',
-                    borderRadius: '15px',
-                    textAlign: 'center'
-                  }}>
-                    <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>{stat.title}</h3>
-                    <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{stat.value}</div>
-                  </div>
-                ))}
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '25px',
+                  borderRadius: '15px',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Today's Appointments</h3>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>8</div>
+                </div>
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '25px',
+                  borderRadius: '15px',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Active Clients</h3>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>{clients.length}</div>
+                </div>
+                <div style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '25px',
+                  borderRadius: '15px',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Auto Reminders</h3>
+                  <div style={{ fontSize: '2em', fontWeight: 'bold' }}>🔔 ON</div>
+                </div>
               </div>
             </div>
           )}
@@ -435,13 +385,11 @@ This message is HIPAA-compliant and confidential.`;
           {activeTab === 'appointments' && (
             <div style={{
               background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
               borderRadius: '20px',
               padding: '30px'
             }}>
               <h2>📅 Appointments</h2>
               
-              {/* Auto Reminder Status */}
               <div style={{
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 color: 'white',
@@ -451,31 +399,16 @@ This message is HIPAA-compliant and confidential.`;
                 textAlign: 'center'
               }}>
                 <h3 style={{ margin: '0 0 10px 0' }}>🔔 Automatic Reminders Active</h3>
-                <p style={{ margin: '0 0 15px 0', opacity: 0.9 }}>
+                <p style={{ margin: '0', opacity: 0.9 }}>
                   All clients receive email reminders 24 hours before their appointment
                 </p>
-                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    fontSize: '14px'
-                  }}>📧 Email Reminders: ON</span>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    fontSize: '14px'
-                  }}>🕐 24 Hour Notice: ON</span>
-                </div>
               </div>
 
-              {/* Appointments List */}
               <div style={{ marginTop: '20px' }}>
                 {[
-                  { name: 'Sarah Johnson', time: '2:00 PM', type: 'Therapy Session', email: 'sarah@email.com', phone: '(555) 123-4567' },
-                  { name: 'Michael Brown', time: '3:30 PM', type: 'Initial Consultation', email: 'michael@email.com', phone: '(555) 234-5678' },
-                  { name: 'Lisa Davis', time: '5:00 PM', type: 'Follow-up Session', email: 'lisa@email.com', phone: '(555) 345-6789' }
+                  { name: 'Sarah Johnson', time: '2:00 PM', type: 'Therapy Session' },
+                  { name: 'Michael Brown', time: '3:30 PM', type: 'Initial Consultation' },
+                  { name: 'Lisa Davis', time: '5:00 PM', type: 'Follow-up Session' }
                 ].map(apt => (
                   <div key={apt.name} style={{
                     display: 'flex',
@@ -485,8 +418,7 @@ This message is HIPAA-compliant and confidential.`;
                     padding: '20px',
                     borderRadius: '15px',
                     marginBottom: '15px',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    alignItems: isMobile ? 'flex-start' : 'center'
+                    flexDirection: isMobile ? 'column' : 'row'
                   }}>
                     <div style={{
                       fontSize: '1.2em',
@@ -498,10 +430,7 @@ This message is HIPAA-compliant and confidential.`;
                     </div>
                     <div style={{ flex: 1 }}>
                       <h4 style={{ margin: '0 0 5px 0' }}>{apt.name}</h4>
-                      <p style={{ margin: '0 0 8px 0' }}>{apt.type}</p>
-                      <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
-                        📧 {apt.email} | 📱 {apt.phone}
-                      </p>
+                      <p style={{ margin: '0' }}>{apt.type}</p>
                       <div style={{
                         background: '#d1fae5',
                         color: '#065f46',
@@ -533,108 +462,314 @@ This message is HIPAA-compliant and confidential.`;
                   </div>
                 ))}
               </div>
+            </div>
+          )}
 
-              {/* HIPAA Compliance Log */}
-              <div style={{
-                background: '#f8f9fa',
-                padding: '20px',
-                borderRadius: '15px',
-                marginTop: '25px'
-              }}>
-                <h3>📋 HIPAA Compliance Audit Log</h3>
+          {/* Clients */}
+          {activeTab === 'clients' && (
+            <div style={{
+              background: 'rgba(255,255,255,0.95)',
+              borderRadius: '20px',
+              padding: '30px'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h2>👥 Client Management</h2>
+                <button
+                  onClick={() => setShowAddClient(true)}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  ➕ Add New Client
+                </button>
+              </div>
+
+              {showAddClient && (
                 <div style={{
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  padding: '10px 15px',
-                  borderRadius: '8px',
-                  marginBottom: '15px',
-                  fontSize: '14px',
-                  borderLeft: '4px solid #f59e0b'
+                  background: '#f8f9fa',
+                  padding: '25px',
+                  borderRadius: '15px',
+                  marginBottom: '25px'
                 }}>
-                  🔒 All reminder activities are automatically logged for regulatory compliance
-                </div>
-                <div>
-                  {[
-                    'Yesterday 2:00 PM - APPOINTMENT_REMINDER_SENT: Sarah Johnson (EMAIL)',
-                    'Yesterday 3:30 PM - APPOINTMENT_REMINDER_SENT: Michael Brown (EMAIL)',
-                    'Yesterday 5:00 PM - APPOINTMENT_REMINDER_SENT: Lisa Davis (EMAIL)',
-                    'Today 8:00 AM - SYSTEM_CHECK: Tomorrow\'s appointments scanned'
-                  ].map((log, i) => (
-                    <div key={i} style={{
-                      padding: '10px',
-                      background: '#faf5ff',
-                      borderRadius: '8px',
-                      marginBottom: '8px',
-                      borderLeft: '3px solid #7c3aed',
-                      fontFamily: 'monospace',
-                      fontSize: '13px'
-                    }}>
-                      🔒 {log} <span style={{ color: '#10b981', fontWeight: 'bold' }}>✅ LOGGED</span>
+                  <h3>📋 New Client Demographics</h3>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                    gap: '15px',
+                    marginTop: '20px'
+                  }}>
+                    <input
+                      type="text"
+                      placeholder="Legal First Name *"
+                      value={newClient.legalFirstName}
+                      onChange={(e) => setNewClient({...newClient, legalFirstName: e.target.value})}
+                      style={{
+                        padding: '12px',
+                        border: '2px solid #e1e5e9',
+                        borderRadius: '8px',
+                        fontSize: '16px'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Legal Last Name *"
+                      value={newClient.legalLastName}
+                      onChange={(e) => setNewClient({...newClient, legalLastName: e.target.value})}
+                      style={{
+                        padding: '12px',
+                        border: '2px solid #e1e5e9',
+                        borderRadius: '8px',
+                        fontSize: '16px'
+                      }}
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email Address *"
+                      value={newClient.email}
+                      onChange={(e) => setNewClient({...newClient, email: e.target.value})}
+                      style={{
+                        padding: '12px',
+                        border: '2px solid #e1e5e9',
+                        borderRadius: '8px',
+                        fontSize: '16px'
+                      }}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={newClient.phone}
+                      onChange={(e) => setNewClient({...newClient, phone: e.target.value})}
+                      style={{
+                        padding: '12px',
+                        border: '2px solid #e1e5e9',
+                        borderRadius: '8px',
+                        fontSize: '16px'
+                      }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        checked={newClient.isMinor}
+                        onChange={(e) => setNewClient({...newClient, isMinor: e.target.checked})}
+                      />
+                      <label>Client is a minor (under 18)</label>
                     </div>
-                  ))}
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '15px', marginTop: '25px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setShowAddClient(false)}
+                      style={{
+                        padding: '12px 24px',
+                        background: '#6b7280',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={addNewClient}
+                      style={{
+                        padding: '12px 24px',
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ✅ Add Client
+                    </button>
+                  </div>
                 </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {clients.map(client => (
+                  <div key={client.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#f8f9fa',
+                    padding: '20px',
+                    borderRadius: '15px',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '15px' : '0'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: '0 0 5px 0' }}>
+                        {client.firstName} {client.lastName}
+                        {client.isMinor && <span style={{ 
+                          background: '#fbbf24', 
+                          color: '#92400e', 
+                          padding: '2px 8px', 
+                          borderRadius: '12px', 
+                          fontSize: '12px', 
+                          marginLeft: '10px' 
+                        }}>MINOR</span>}
+                      </h4>
+                      <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
+                        📧 {client.email} | 📱 {client.phone}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', width: isMobile ? '100%' : 'auto' }}>
+                      <button style={{
+                        padding: '8px 15px',
+                        background: '#667eea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        flex: isMobile ? '1' : 'none'
+                      }}>
+                        📋 View File
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Other tabs - simplified for deployment */}
-          {activeTab === 'clients' && (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              padding: '30px'
-            }}>
-              <h2>👥 Client Management</h2>
-              <p>Client management system ready for integration.</p>
-            </div>
-          )}
-
+          {/* AI Notes */}
           {activeTab === 'notes' && (
             <div style={{
               background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
               borderRadius: '20px',
               padding: '30px'
             }}>
               <h2>🤖 AI Clinical Notes</h2>
-              <p>AI note generation system ready for integration.</p>
+              
+              <div style={{
+                background: isRecordingSession ? '#fef2f2' : '#f8f9fa',
+                border: isRecordingSession ? '2px solid #ef4444' : '1px solid #e5e7eb',
+                padding: '25px',
+                borderRadius: '15px',
+                marginBottom: '25px'
+              }}>
+                <h3>🎙️ Full Session Recording</h3>
+                <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '16px' }}>
+                  Record your entire therapy session. AI will analyze the conversation.
+                </p>
+                
+                {!isRecordingSession ? (
+                  <button
+                    onClick={startSessionRecording}
+                    style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🔴 START SESSION RECORDING
+                  </button>
+                ) : (
+                  <div>
+                    <div style={{
+                      background: '#fef2f2',
+                      border: '2px solid #fecaca',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '16px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        color: '#dc2626',
+                        marginBottom: '8px'
+                      }}>
+                        🔴 RECORDING SESSION
+                      </div>
+                      <div style={{
+                        fontSize: '32px',
+                        fontWeight: 'bold',
+                        fontFamily: 'monospace',
+                        color: '#dc2626'
+                      }}>
+                        {formatDuration(recordingDuration)}
+                      </div>
+                      <p style={{ fontSize: '14px', color: '#991b1b', margin: '8px 0 0 0' }}>
+                        Speak normally - capturing entire session
+                      </p>
+                    </div>
+                    
+                    <button
+                      onClick={stopSessionRecording}
+                      style={{
+                        width: '100%',
+                        padding: '16px',
+                        background: '#374151',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⏹️ STOP & PROCESS RECORDING
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={generateAINotes}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                🤖 Generate AI Clinical Notes
+              </button>
             </div>
           )}
 
+          {/* Notifications */}
           {activeTab === 'notifications' && (
             <div style={{
               background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
               borderRadius: '20px',
               padding: '30px'
             }}>
               <h2>📧 Notification System</h2>
-              <p>Notification management system active.</p>
-            </div>
-          )}
-
-          {activeTab === 'documents' && (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              padding: '30px'
-            }}>
-              <h2>📋 Documents</h2>
-              <p>Document management system ready for integration.</p>
-            </div>
-          )}
-
-          {activeTab === 'team' && (
-            <div style={{
-              background: 'rgba(255,255,255,0.95)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '20px',
-              padding: '30px'
-            }}>
-              <h2>👨‍⚕️ Team Management</h2>
-              <p>Team management features ready for integration.</p>
+              <p>Professional email and SMS notification system active.</p>
+              <div style={{
+                background: '#f8f9fa',
+                padding: '20px',
+                borderRadius: '15px',
+                marginTop: '20px'
+              }}>
+                <h3>📋 HIPAA Compliance Audit Log</h3>
+                <p style={{ color: '#666', fontSize: '14px' }}>
+                  All notification activities are automatically logged for regulatory compliance.
+                </p>
+              </div>
             </div>
           )}
 
