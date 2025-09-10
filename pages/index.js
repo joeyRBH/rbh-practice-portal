@@ -605,17 +605,19 @@ This is an automated reminder from your MindCare Portal.`;
                 🆓 Setup Instructions (2 Minutes)
               </h3>
               <div style={{ fontSize: '14px', color: '#047857', lineHeight: '1.6' }}>
-                <p style={{ margin: '0 0 10px 0' }}>
-                  <strong>Get unlimited free emails:</strong>
+                <p style={{ margin: '0 0 15px 0' }}>
+                  ✅ <strong>Your portal is configured and ready!</strong>
                 </p>
-                <ol style={{ margin: 0, paddingLeft: '20px' }}>
-                  <li>Go to <strong>web3forms.com</strong></li>
-                  <li>Enter your email and get your <strong>Access Key</strong></li>
-                  <li>Replace <code>YOUR_ACCESS_KEY_HERE</code> in the code</li>
-                  <li>Deploy and start sending unlimited free emails!</li>
-                </ol>
+                <div style={{ backgroundColor: '#dcfce7', padding: '15px', borderRadius: '10px', margin: '10px 0' }}>
+                  <p style={{ margin: '0 0 5px 0', fontSize: '13px' }}>
+                    <strong>Access Key:</strong> 606fbfff-6753-4d9a-9b8f-c6577bec5948
+                  </p>
+                  <p style={{ margin: '0', fontSize: '13px' }}>
+                    <strong>Status:</strong> Active and ready to send emails
+                  </p>
+                </div>
                 <p style={{ margin: '15px 0 0 0', fontSize: '12px' }}>
-                  🎉 <strong>Completely Free Forever:</strong> No limits, no credit card required!
+                  🎉 <strong>Ready to go:</strong> Your portal can now send unlimited free emails to clients!
                 </p>
               </div>
             </div>
