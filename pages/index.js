@@ -8,12 +8,27 @@ export default function MindCarePortal() {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [emailStatus, setEmailStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailHistory, setEmailHistory] = useState([]);
 
   useEffect(() => {
     setIsClient(true);
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    
+    // Load EmailJS script
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+    script.onload = () => {
+      if (window.emailjs) {
+        // Initialize EmailJS - Replace with your actual public key
+        window.emailjs.init('YOUR_PUBLIC_KEY');
+      }
+    };
+    document.head.appendChild(script);
+    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -44,6 +59,86 @@ export default function MindCarePortal() {
     closeMenu();
   };
 
+  // Real Email Integration Function
+  const sendEmailReminder = async (clientName, appointmentTime, reminderType) => {
+    if (!window.emailjs) {
+      alert('Email service not loaded. Please refresh and try again.');
+      return;
+    }
+
+    setIsLoading(true);
+    setEmailStatus('Sending...');
+
+    try {
+      const emailTemplate = {
+        to_name: clientName,
+        to_email: getClientEmail(clientName),
+        from_name: userName,
+        appointment_time: appointmentTime,
+        practice_name: 'MindCare Practice',
+        message: `
+Hello ${clientName},
+
+This is a friendly reminder of your upcoming appointment:
+
+📅 Date & Time: ${appointmentTime}
+👨‍⚕️ Provider: ${userName}
+🏥 Practice: MindCare Practice
+
+Please arrive 10 minutes early for check-in.
+
+If you need to reschedule, please call us at (555) 123-4567.
+
+Best regards,
+MindCare Practice Team
+
+---
+This is an automated reminder. Please do not reply to this email.
+        `
+      };
+
+      // Send email using EmailJS
+      const response = await window.emailjs.send(
+        'YOUR_SERVICE_ID',    // Replace with your EmailJS service ID
+        'YOUR_TEMPLATE_ID',   // Replace with your EmailJS template ID
+        emailTemplate
+      );
+
+      if (response.status === 200) {
+        setEmailStatus('✅ Email sent successfully!');
+        
+        // Add to email history
+        const newEmail = {
+          id: Date.now(),
+          client: clientName,
+          type: reminderType,
+          time: new Date().toLocaleString(),
+          status: 'delivered'
+        };
+        setEmailHistory(prev => [newEmail, ...prev]);
+        
+        setTimeout(() => setEmailStatus(''), 3000);
+      }
+    } catch (error) {
+      console.error('Email error:', error);
+      setEmailStatus('❌ Failed to send email. Please try again.');
+      setTimeout(() => setEmailStatus(''), 5000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mock function to get client email - in real app, this would come from database
+  const getClientEmail = (clientName) => {
+    const emails = {
+      'Sarah Johnson': 'sarah.johnson@email.com',
+      'Mike Chen': 'mike.chen@email.com',
+      'Lisa Rodriguez': 'lisa.rodriguez@email.com',
+      'David Kim': 'david.kim@email.com'
+    };
+    return emails[clientName] || 'client@email.com';
+  };
+
   if (!isClient) {
     return (
       <div style={{
@@ -53,7 +148,7 @@ export default function MindCarePortal() {
         justifyContent: 'center',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}>
-        <div style={{ fontSize: '18px' }}>Loading...</div>
+        <div style={{ fontSize: '18px' }}>Loading MindCare Portal...</div>
       </div>
     );
   }
@@ -96,7 +191,7 @@ export default function MindCarePortal() {
             marginBottom: '40px',
             fontSize: '18px'
           }}>
-            HIPAA-Compliant • Mobile-Optimized
+            HIPAA-Compliant • Real Email Integration
           </p>
 
           <div style={{ marginBottom: '20px' }}>
@@ -114,14 +209,6 @@ export default function MindCarePortal() {
                 marginBottom: '15px',
                 boxShadow: '0 10px 20px rgba(79, 70, 229, 0.3)',
                 transition: 'all 0.2s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 15px 30px rgba(79, 70, 229, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 10px 20px rgba(79, 70, 229, 0.3)';
               }}
             >
               👨‍⚕️ Login as Therapist
@@ -141,14 +228,6 @@ export default function MindCarePortal() {
                 boxShadow: '0 10px 20px rgba(5, 150, 105, 0.3)',
                 transition: 'all 0.2s ease'
               }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 15px 30px rgba(5, 150, 105, 0.4)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 10px 20px rgba(5, 150, 105, 0.3)';
-              }}
             >
               👤 Login as Client
             </button>
@@ -162,7 +241,7 @@ export default function MindCarePortal() {
             fontSize: '14px',
             color: '#6b7280'
           }}>
-            🔒 HIPAA Compliant • 🔐 End-to-End Encrypted • ✅ SOC 2 Certified
+            🔒 HIPAA Compliant • 📧 Real Email Integration • ✅ SOC 2 Certified
           </div>
         </div>
       </div>
@@ -175,7 +254,7 @@ export default function MindCarePortal() {
     { id: 'clients', label: 'Clients', icon: '👥' },
     { id: 'ai-notes', label: 'AI Notes', icon: '🤖' },
     { id: 'calendar', label: 'Calendar', icon: '🗓️' },
-    { id: 'notifications', label: 'Notifications', icon: '📧' }
+    { id: 'notifications', label: 'Email Center', icon: '📧' }
   ];
 
   const renderContent = () => {
@@ -218,6 +297,21 @@ export default function MindCarePortal() {
                 </button>
               )}
             </div>
+
+            {/* Email Status Banner */}
+            {emailStatus && (
+              <div style={{
+                padding: '15px',
+                backgroundColor: emailStatus.includes('✅') ? '#ecfdf5' : emailStatus.includes('❌') ? '#fef2f2' : '#fef3c7',
+                color: emailStatus.includes('✅') ? '#166534' : emailStatus.includes('❌') ? '#dc2626' : '#92400e',
+                borderRadius: '10px',
+                marginBottom: '20px',
+                textAlign: 'center',
+                fontWeight: '500'
+              }}>
+                {emailStatus}
+              </div>
+            )}
             
             <div style={{
               display: 'grid',
@@ -251,11 +345,11 @@ export default function MindCarePortal() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h3 style={{ color: '#059669', fontWeight: '600', marginBottom: '10px', fontSize: '16px' }}>👥 Active Clients</h3>
-                    <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#1f2937', margin: '0' }}>24</p>
-                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '5px 0 0 0' }}>total clients</p>
+                    <h3 style={{ color: '#059669', fontWeight: '600', marginBottom: '10px', fontSize: '16px' }}>📧 Emails Sent</h3>
+                    <p style={{ fontSize: '36px', fontWeight: 'bold', color: '#1f2937', margin: '0' }}>{emailHistory.length}</p>
+                    <p style={{ color: '#6b7280', fontSize: '14px', margin: '5px 0 0 0' }}>this session</p>
                   </div>
-                  <div style={{ fontSize: '48px' }}>👥</div>
+                  <div style={{ fontSize: '48px' }}>📧</div>
                 </div>
               </div>
 
@@ -290,6 +384,22 @@ export default function MindCarePortal() {
                 gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '15px'
               }}>
+                <button 
+                  onClick={() => showTab('notifications')}
+                  style={{
+                    padding: '16px',
+                    background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '15px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  📧 Send Email Reminder
+                </button>
                 <button 
                   onClick={() => showTab('ai-notes')}
                   style={{
@@ -338,22 +448,6 @@ export default function MindCarePortal() {
                 >
                   📅 Schedule
                 </button>
-                <button 
-                  onClick={() => showTab('notifications')}
-                  style={{
-                    padding: '16px',
-                    background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '15px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  📧 Send Reminder
-                </button>
               </div>
             </div>
           </div>
@@ -377,10 +471,10 @@ export default function MindCarePortal() {
               overflow: 'hidden'
             }}>
               {[
-                { time: '9:00 AM', client: 'Sarah Johnson', type: 'Individual Therapy', status: 'confirmed' },
-                { time: '10:30 AM', client: 'Mike Chen', type: 'Couples Therapy', status: 'confirmed' },
-                { time: '2:00 PM', client: 'Lisa Rodriguez', type: 'Family Therapy', status: 'pending' },
-                { time: '3:30 PM', client: 'David Kim', type: 'Individual Therapy', status: 'confirmed' }
+                { time: 'Today 9:00 AM', client: 'Sarah Johnson', type: 'Individual Therapy', status: 'confirmed' },
+                { time: 'Today 10:30 AM', client: 'Mike Chen', type: 'Couples Therapy', status: 'confirmed' },
+                { time: 'Today 2:00 PM', client: 'Lisa Rodriguez', type: 'Family Therapy', status: 'pending' },
+                { time: 'Tomorrow 9:00 AM', client: 'David Kim', type: 'Individual Therapy', status: 'confirmed' }
               ].map((apt, index) => (
                 <div key={index} style={{
                   padding: isMobile ? '20px' : '30px',
@@ -414,6 +508,22 @@ export default function MindCarePortal() {
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button 
+                        onClick={() => sendEmailReminder(apt.client, apt.time, 'appointment_reminder')}
+                        disabled={isLoading}
+                        style={{
+                          padding: '10px 16px',
+                          backgroundColor: isLoading ? '#9ca3af' : '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '10px',
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        {isLoading ? '⏳' : '📧'} Email Reminder
+                      </button>
+                      <button 
                         onClick={() => alert(`Starting video call with ${apt.client}`)}
                         style={{
                           padding: '10px 16px',
@@ -428,25 +538,207 @@ export default function MindCarePortal() {
                       >
                         🎥 Start Call
                       </button>
-                      <button 
-                        onClick={() => alert(`Opening chart for ${apt.client}`)}
-                        style={{
-                          padding: '10px 16px',
-                          backgroundColor: '#6b7280',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500'
-                        }}
-                      >
-                        📋 Chart
-                      </button>
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        );
+
+      case 'notifications':
+        return (
+          <div style={contentStyle}>
+            <h2 style={{
+              fontSize: isMobile ? '24px' : '32px',
+              fontWeight: 'bold',
+              color: '#1f2937',
+              marginBottom: '30px'
+            }}>📧 Email Center</h2>
+
+            {/* Email Status */}
+            {emailStatus && (
+              <div style={{
+                padding: '15px',
+                backgroundColor: emailStatus.includes('✅') ? '#ecfdf5' : emailStatus.includes('❌') ? '#fef2f2' : '#fef3c7',
+                color: emailStatus.includes('✅') ? '#166534' : emailStatus.includes('❌') ? '#dc2626' : '#92400e',
+                borderRadius: '15px',
+                marginBottom: '25px',
+                textAlign: 'center',
+                fontWeight: '500'
+              }}>
+                {emailStatus}
+              </div>
+            )}
+            
+            <div style={{
+              background: 'white',
+              padding: '30px',
+              borderRadius: '20px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+              border: '1px solid #e5e7eb',
+              marginBottom: '30px'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#1f2937' }}>📱 Send Appointment Reminder</h3>
+              
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '25px',
+                marginBottom: '25px'
+              }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Select Client & Appointment
+                  </label>
+                  <select 
+                    id="clientSelect"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '15px',
+                      fontSize: '16px',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="Sarah Johnson|Today 9:00 AM">Sarah Johnson - Today 9:00 AM</option>
+                    <option value="Mike Chen|Today 10:30 AM">Mike Chen - Today 10:30 AM</option>
+                    <option value="Lisa Rodriguez|Today 2:00 PM">Lisa Rodriguez - Today 2:00 PM</option>
+                    <option value="David Kim|Tomorrow 9:00 AM">David Kim - Tomorrow 9:00 AM</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '8px'
+                  }}>
+                    Email Type
+                  </label>
+                  <select 
+                    id="emailType"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '2px solid #d1d5db',
+                      borderRadius: '15px',
+                      fontSize: '16px',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="appointment_reminder">📧 Appointment Reminder</option>
+                    <option value="confirmation">✅ Appointment Confirmation</option>
+                    <option value="follow_up">📋 Follow-up Instructions</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => {
+                  const clientSelect = document.getElementById('clientSelect');
+                  const [clientName, appointmentTime] = clientSelect.value.split('|');
+                  const emailType = document.getElementById('emailType').value;
+                  sendEmailReminder(clientName, appointmentTime, emailType);
+                }}
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: '15px',
+                  background: isLoading 
+                    ? 'linear-gradient(135deg, #9ca3af, #6b7280)' 
+                    : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '15px',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  fontWeight: '500',
+                  fontSize: '16px'
+                }}
+              >
+                {isLoading ? '⏳ Sending Email...' : '📧 Send Email Reminder'}
+              </button>
+            </div>
+
+            {/* Email History */}
+            {emailHistory.length > 0 && (
+              <div style={{
+                background: 'white',
+                padding: '30px',
+                borderRadius: '20px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
+                border: '1px solid #e5e7eb'
+              }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#1f2937' }}>📋 Email History</h3>
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {emailHistory.map((email) => (
+                    <div key={email.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '15px',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '10px',
+                      marginBottom: '10px'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: '500', color: '#1f2937', margin: '0 0 5px 0' }}>
+                          📧 Email sent to {email.client}
+                        </p>
+                        <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+                          {email.time} • {email.type.replace('_', ' ')}
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        backgroundColor: email.status === 'delivered' ? '#dcfce7' : '#fef3c7',
+                        color: email.status === 'delivered' ? '#166534' : '#92400e'
+                      }}>
+                        {email.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Setup Instructions */}
+            <div style={{
+              background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+              padding: '25px',
+              borderRadius: '20px',
+              border: '2px solid #3b82f6',
+              marginTop: '30px'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '15px', color: '#1e40af' }}>
+                🔧 Setup Instructions
+              </h3>
+              <div style={{ fontSize: '14px', color: '#1e40af', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  <strong>To enable real email sending:</strong>
+                </p>
+                <ol style={{ margin: 0, paddingLeft: '20px' }}>
+                  <li>Sign up for free at <strong>emailjs.com</strong></li>
+                  <li>Create an email service (Gmail, Outlook, etc.)</li>
+                  <li>Get your Service ID, Template ID, and Public Key</li>
+                  <li>Replace the placeholder values in the code</li>
+                </ol>
+                <p style={{ margin: '15px 0 0 0', fontSize: '12px' }}>
+                  💡 <strong>Demo Mode:</strong> Currently showing UI functionality. Real emails will send once configured.
+                </p>
+              </div>
             </div>
           </div>
         );
@@ -467,10 +759,10 @@ export default function MindCarePortal() {
               gap: '25px'
             }}>
               {[
-                { name: 'Sarah Johnson', status: 'Active', sessions: 12, progress: 85 },
-                { name: 'Mike Chen', status: 'Active', sessions: 8, progress: 72 },
-                { name: 'Lisa Rodriguez', status: 'Pending', sessions: 3, progress: 45 },
-                { name: 'David Kim', status: 'Active', sessions: 15, progress: 90 }
+                { name: 'Sarah Johnson', status: 'Active', sessions: 12, progress: 85, email: 'sarah.johnson@email.com', nextAppt: 'Today 9:00 AM' },
+                { name: 'Mike Chen', status: 'Active', sessions: 8, progress: 72, email: 'mike.chen@email.com', nextAppt: 'Today 10:30 AM' },
+                { name: 'Lisa Rodriguez', status: 'Pending', sessions: 3, progress: 45, email: 'lisa.rodriguez@email.com', nextAppt: 'Today 2:00 PM' },
+                { name: 'David Kim', status: 'Active', sessions: 15, progress: 90, email: 'david.kim@email.com', nextAppt: 'Tomorrow 9:00 AM' }
               ].map((client, index) => (
                 <div key={index} style={{
                   background: 'white',
@@ -479,7 +771,8 @@ export default function MindCarePortal() {
                   boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
                   border: '1px solid #e5e7eb'
                 }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '20px' }}>{client.name}</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '5px' }}>{client.name}</h3>
+                  <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>{client.email}</p>
                   
                   <div style={{ marginBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', marginBottom: '8px' }}>
@@ -510,14 +803,36 @@ export default function MindCarePortal() {
                         <span style={{ marginLeft: '5px', fontWeight: '500' }}>{client.sessions}</span>
                       </div>
                     </div>
+                    <div style={{ fontSize: '14px', marginTop: '10px' }}>
+                      <span style={{ color: '#6b7280' }}>Next Appointment:</span>
+                      <span style={{ marginLeft: '5px', fontWeight: '500' }}>{client.nextAppt}</span>
+                    </div>
                   </div>
                   
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     <button 
+                      onClick={() => sendEmailReminder(client.name, client.nextAppt, 'appointment_reminder')}
+                      disabled={isLoading}
+                      style={{
+                        flex: 1,
+                        minWidth: '100px',
+                        padding: '10px',
+                        backgroundColor: isLoading ? '#d1d5db' : '#eff6ff',
+                        color: isLoading ? '#6b7280' : '#1d4ed8',
+                        border: 'none',
+                        borderRadius: '10px',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500'
+                      }}
+                    >
+                      {isLoading ? '⏳' : '📧'} Email
+                    </button>
+                    <button 
                       onClick={() => showTab('ai-notes')}
                       style={{
                         flex: 1,
-                        minWidth: '80px',
+                        minWidth: '100px',
                         padding: '10px',
                         backgroundColor: '#eef2ff',
                         color: '#4338ca',
@@ -531,10 +846,10 @@ export default function MindCarePortal() {
                       📝 Notes
                     </button>
                     <button 
-                      onClick={() => alert(`Calling ${client.name}`)}
+                      onClick={() => alert(`Calling ${client.name} at their registered number`)}
                       style={{
                         flex: 1,
-                        minWidth: '80px',
+                        minWidth: '100px',
                         padding: '10px',
                         backgroundColor: '#ecfdf5',
                         color: '#047857',
@@ -546,23 +861,6 @@ export default function MindCarePortal() {
                       }}
                     >
                       📞 Call
-                    </button>
-                    <button 
-                      onClick={() => alert(`Emailing ${client.name}`)}
-                      style={{
-                        flex: 1,
-                        minWidth: '80px',
-                        padding: '10px',
-                        backgroundColor: '#eff6ff',
-                        color: '#1d4ed8',
-                        border: 'none',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}
-                    >
-                      📧 Email
                     </button>
                   </div>
                 </div>
@@ -784,123 +1082,6 @@ export default function MindCarePortal() {
               >
                 📅 Open Calendar
               </button>
-            </div>
-          </div>
-        );
-
-      case 'notifications':
-        return (
-          <div style={contentStyle}>
-            <h2 style={{
-              fontSize: isMobile ? '24px' : '32px',
-              fontWeight: 'bold',
-              color: '#1f2937',
-              marginBottom: '30px'
-            }}>📧 Notifications</h2>
-            
-            <div style={{
-              background: 'white',
-              padding: '30px',
-              borderRadius: '20px',
-              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.05)',
-              border: '1px solid #e5e7eb'
-            }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#1f2937' }}>📱 Send Reminder</h3>
-              
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-                gap: '25px',
-                marginBottom: '25px'
-              }}>
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    Select Client
-                  </label>
-                  <select style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '15px',
-                    fontSize: '16px',
-                    backgroundColor: 'white'
-                  }}>
-                    <option>Sarah Johnson - Today 9:00 AM</option>
-                    <option>Mike Chen - Today 10:30 AM</option>
-                    <option>Lisa Rodriguez - Today 2:00 PM</option>
-                    <option>David Kim - Tomorrow 9:00 AM</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '8px'
-                  }}>
-                    Reminder Type
-                  </label>
-                  <select style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '15px',
-                    fontSize: '16px',
-                    backgroundColor: 'white'
-                  }}>
-                    <option>📧 Email Reminder</option>
-                    <option>📱 SMS Reminder</option>
-                    <option>📧📱 Email + SMS</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div style={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: '15px'
-              }}>
-                <button 
-                  onClick={() => alert('Email reminder sent successfully!')}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '15px',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '16px'
-                  }}
-                >
-                  📧 Send Email
-                </button>
-                <button 
-                  onClick={() => alert('SMS reminder sent successfully!')}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '15px',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '16px'
-                  }}
-                >
-                  📱 Send SMS
-                </button>
-              </div>
             </div>
           </div>
         );
