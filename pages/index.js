@@ -1,669 +1,910 @@
-import React, { useState } from 'react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile HIPAA Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-export default function MobileHIPAAPortal() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [notifications, setNotifications] = useState([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [sessionInput, setSessionInput] = useState('');
-  const [aiNotes, setAiNotes] = useState('');
-  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
 
-  // Simple icons
-  const MenuIcon = () => (
-    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
+        .portal-container {
+            min-height: 100vh;
+            display: flex;
+        }
 
-  const BellIcon = () => (
-    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  );
+        /* Login Styles */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            width: 100%;
+        }
 
-  const UserIcon = () => (
-    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
 
-  const testNotifications = () => {
-    const email = {
-      id: Date.now(),
-      type: 'email',
-      message: 'Test email sent to Test Patient',
-      time: 'Just now'
-    };
-    const sms = {
-      id: Date.now() + 1,
-      type: 'sms', 
-      message: 'Test SMS sent to Test Patient',
-      time: 'Just now'
-    };
-    setNotifications(prev => [email, sms, ...prev]);
-    alert('Test notifications added!');
-  };
+        .login-form {
+            margin-top: 30px;
+        }
 
-  const generateAIClinalNotes = async (sessionData) => {
-    if (!sessionData.trim()) return;
-    
-    setIsGeneratingNotes(true);
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      const mockNotes = `CLINICAL SESSION NOTES
-Generated: ${new Date().toLocaleString()}
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
 
-SUBJECTIVE:
-Patient reported: "${sessionData}"
+        .login-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
 
-Key themes identified:
-- Client engagement and therapeutic rapport
-- Progress toward treatment goals
-- Current emotional state and coping strategies
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
 
-OBJECTIVE:
-- Client appeared alert and oriented
-- Appropriate mood and affect for session context
-- Good eye contact and verbal communication
-- Engaged actively in therapeutic process
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
 
-ASSESSMENT:
-- Client demonstrates continued progress in therapy
-- Therapeutic alliance remains strong
-- Treatment goals being addressed appropriately
-- No immediate safety concerns identified
+        .hipaa-notice {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
 
-PLAN:
-- Continue current therapeutic approach
-- Schedule follow-up session as planned
-- Consider adjusting treatment plan based on session outcomes
-- Monitor progress toward established goals
+        /* Mobile Header */
+        .mobile-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
 
-CLINICIAN NOTES:
-Session productive with good client engagement. Recommend continuing current treatment modalities.
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
 
----
-Generated by Claude AI Assistant for ${currentUser?.name || 'Clinician'}
-HIPAA Compliant - Confidential Medical Record`;
+        .header-user {
+            font-size: 24px;
+        }
 
-      setAiNotes(mockNotes);
-      setIsGeneratingNotes(false);
-    }, 2000);
-  };
+        /* Mobile Navigation */
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100vh;
+            background: white;
+            z-index: 1001;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
 
-  const downloadNotes = (notes, filename) => {
-    const blob = new Blob([notes], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || `clinical-notes-${Date.now()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+        .mobile-nav.open {
+            left: 0;
+        }
 
-  // Login Screen
-  if (!currentUser) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        fontFamily: 'system-ui, sans-serif'
-      }}>
-        <div style={{width: '100%', maxWidth: '400px'}}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-            padding: '32px',
-            textAlign: 'center'
-          }}>
-            <h1 style={{fontSize: '24px', fontWeight: 'bold', marginBottom: '8px'}}>HIPAA Portal</h1>
-            <p style={{color: '#666', marginBottom: '32px'}}>Secure Practice Management</p>
-            
-            <button
-              onClick={() => setCurrentUser({role: 'therapist', name: 'Dr. Smith'})}
-              style={{
-                width: '100%',
-                padding: '16px',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '16px',
-                fontWeight: '600',
-                marginBottom: '16px',
-                cursor: 'pointer'
-              }}
-            >
-              👨‍⚕️ Login as Therapist
-            </button>
-            
-            <button
-              onClick={() => setCurrentUser({role: 'client', name: 'Patient'})}
-              style={{
-                width: '100%',
-                padding: '16px',
-                backgroundColor: '#16a34a',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer'
-              }}
-            >
-              👤 Login as Client
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+        .mobile-nav-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-  // Main Portal
-  return (
-    <div style={{minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: 'system-ui, sans-serif'}}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '16px',
-        borderBottom: '1px solid #e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            style={{padding: '8px', border: 'none', background: 'none', cursor: 'pointer'}}
-          >
-            <MenuIcon />
-          </button>
-          <div>
-            <h1 style={{fontSize: '18px', fontWeight: '600', margin: 0}}>HIPAA Portal</h1>
-            <p style={{fontSize: '14px', color: '#666', margin: 0}}>{currentUser.name}</p>
-          </div>
-        </div>
-        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-          <button
-            onClick={() => setActiveTab('notifications')}
-            style={{
-              padding: '8px',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              position: 'relative'
-            }}
-          >
-            <BellIcon />
-            {notifications.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '0',
-                right: '0',
-                backgroundColor: '#ef4444',
-                color: 'white',
-                borderRadius: '50%',
-                width: '18px',
-                height: '18px',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {notifications.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setCurrentUser(null)}
-            style={{padding: '8px', border: 'none', background: 'none', cursor: 'pointer'}}
-          >
-            <UserIcon />
-          </button>
-        </div>
-      </div>
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
 
-      {/* Content */}
-      <div style={{padding: '16px', paddingBottom: '80px'}}>
-        {activeTab === 'dashboard' && (
-          <div>
-            <h2 style={{fontSize: '20px', fontWeight: 'bold', marginBottom: '16px'}}>Dashboard</h2>
-            
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{marginBottom: '12px'}}>Quick Actions</h3>
-              <button
-                onClick={testNotifications}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginBottom: '8px'
-                }}
-              >
-                🧪 Test Notification System
-              </button>
-              
-              <button
-                onClick={() => setActiveTab('ai-notes')}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#2563eb',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                🤖 Try AI Clinical Notes
-              </button>
+        .mobile-nav-item {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            background: none;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 16px;
+        }
+
+        .mobile-nav-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .mobile-nav-item.active {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        /* Desktop Navigation */
+        .desktop-nav {
+            width: 250px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .user-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .nav-item {
+            padding: 15px;
+            border: none;
+            background: none;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+            font-size: 16px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(102, 126, 234, 0.1);
+        }
+
+        .nav-item.active {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .content-section {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number, .stat-status {
+            font-size: 2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* Activity */
+        .recent-activity {
+            margin-top: 30px;
+        }
+
+        .activity-list {
+            margin-top: 15px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .activity-icon {
+            font-size: 20px;
+        }
+
+        /* Appointments */
+        .appointments-container {
+            margin-top: 20px;
+        }
+
+        .appointment-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        .appointment-time {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            min-width: 80px;
+        }
+
+        .appointment-info {
+            flex: 1;
+        }
+
+        .appointment-info h4 {
+            margin-bottom: 5px;
+        }
+
+        /* Buttons */
+        .btn-primary, .btn-secondary, .btn-small {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 12px;
+            margin: 0 5px;
+        }
+
+        .btn-primary:hover, .btn-secondary:hover, .btn-small:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Notes */
+        .notes-generator {
+            margin-bottom: 30px;
+        }
+
+        .notes-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .generated-notes {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .note-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        /* Clients */
+        .client-search {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .client-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .client-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .client-info h4 {
+            margin-bottom: 5px;
+        }
+
+        .client-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 767px) {
+            .desktop-nav {
+                display: none;
+            }
+
+            .mobile-header {
+                display: flex !important;
+            }
+
+            .main-content {
+                margin-top: 60px;
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+
+            .stat-card {
+                padding: 20px;
+            }
+
+            .stat-number, .stat-status {
+                font-size: 1.5em;
+            }
+
+            .appointment-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .appointment-time {
+                min-width: auto;
+            }
+
+            .client-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .client-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .content-section {
+                padding: 20px;
+            }
+
+            .btn-primary, .btn-secondary {
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="portal-container">
+        <!-- Login Screen -->
+        <div id="loginContainer" class="login-container">
+            <div class="login-card">
+                <h1>🏥 HIPAA Secure Portal</h1>
+                <p>Healthcare Provider Access</p>
+                <div class="login-form">
+                    <input type="email" placeholder="Email" class="login-input" />
+                    <input type="password" placeholder="Password" class="login-input" />
+                    <button onclick="login()" class="login-btn">Secure Login</button>
+                </div>
+                <div class="hipaa-notice">
+                    🔒 HIPAA-compliant secure access
+                </div>
             </div>
-          </div>
-        )}
+        </div>
 
-        {activeTab === 'ai-notes' && (
-          <div>
-            <h2 style={{fontSize: '20px', fontWeight: 'bold', marginBottom: '16px'}}>
-              🤖 AI Clinical Notes
-            </h2>
-            
-            {/* Session Recording */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{color: '#dc2626', marginBottom: '12px'}}>🎙️ Session Recording</h3>
-              <p style={{fontSize: '14px', color: '#666', marginBottom: '16px'}}>
-                Record entire therapy sessions. AI will generate comprehensive clinical notes.
-              </p>
-              
-              <button
-                onClick={() => alert('Session recording feature - would start recording here!')}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                🔴 START SESSION RECORDING
-              </button>
-            </div>
+        <!-- Main Portal -->
+        <div id="mainPortal" class="hidden">
+            <!-- Mobile Header -->
+            <header class="mobile-header">
+                <button onclick="toggleMenu()" class="menu-btn">☰</button>
+                <h1>HIPAA Portal</h1>
+                <div class="header-user">👨‍⚕️</div>
+            </header>
 
-            {/* Session Notes Input */}
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{marginBottom: '12px'}}>📝 Session Notes</h3>
-              <textarea
-                value={sessionInput}
-                onChange={(e) => setSessionInput(e.target.value)}
-                placeholder="Enter session notes, key observations, client interactions..."
-                style={{
-                  width: '100%',
-                  height: '120px',
-                  padding: '12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  marginBottom: '12px',
-                  boxSizing: 'border-box',
-                  resize: 'vertical'
-                }}
-              />
-              
-              <div style={{display: 'flex', gap: '8px'}}>
-                <button
-                  onClick={() => alert('Voice input feature - would record short notes here!')}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: '#16a34a',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🎤 Voice Note
+            <!-- Mobile Navigation -->
+            <nav id="mobileNav" class="mobile-nav">
+                <div class="mobile-nav-header">
+                    <h3>🏥 HIPAA Portal</h3>
+                    <button onclick="closeMenu()" class="close-btn">×</button>
+                </div>
+                <button onclick="showTab('dashboard')" class="mobile-nav-item active" data-tab="dashboard">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
                 </button>
-                
-                <button
-                  onClick={() => generateAIClinalNotes(sessionInput)}
-                  disabled={!sessionInput.trim() || isGeneratingNotes}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    backgroundColor: (!sessionInput.trim() || isGeneratingNotes) ? '#9ca3af' : '#2563eb',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    cursor: (!sessionInput.trim() || isGeneratingNotes) ? 'not-allowed' : 'pointer'
-                  }}
-                >
-                  {isGeneratingNotes ? '🤖 Generating...' : '🤖 Generate Notes'}
+                <button onclick="showTab('appointments')" class="mobile-nav-item" data-tab="appointments">
+                    <span class="nav-icon">📅</span>
+                    Appointments
                 </button>
-              </div>
-            </div>
-
-            {/* AI Generated Notes */}
-            {(aiNotes || isGeneratingNotes) && (
-              <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '16px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}>
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px'}}>
-                  <h3 style={{margin: 0}}>🤖 AI Clinical Notes</h3>
-                  {aiNotes && (
-                    <button
-                      onClick={() => downloadNotes(aiNotes, `clinical-notes-${Date.now()}.txt`)}
-                      style={{
-                        padding: '6px 12px',
-                        backgroundColor: '#16a34a',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      📥 Download
-                    </button>
-                  )}
-                </div>
-                
-                {isGeneratingNotes ? (
-                  <div style={{
-                    padding: '24px',
-                    textAlign: 'center',
-                    color: '#6b7280'
-                  }}>
-                    <p>🤖 Claude AI is generating your clinical notes...</p>
-                    <p style={{fontSize: '14px'}}>This may take a moment.</p>
-                  </div>
-                ) : (
-                  <div style={{
-                    backgroundColor: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    fontFamily: 'monospace',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-wrap',
-                    maxHeight: '400px',
-                    overflowY: 'auto'
-                  }}>
-                    {aiNotes}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'notifications' && (
-          <div>
-            <h2 style={{fontSize: '20px', fontWeight: 'bold', marginBottom: '16px'}}>Notifications</h2>
-            
-            <div style={{
-              backgroundColor: '#fef3c7',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '16px',
-              border: '1px solid #f59e0b'
-            }}>
-              <h3 style={{color: '#92400e', marginBottom: '8px'}}>🧪 Test System</h3>
-              <p style={{color: '#92400e', fontSize: '14px', marginBottom: '12px'}}>
-                Current notifications: {notifications.length}
-              </p>
-              <button
-                onClick={testNotifications}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#8b5cf6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                📧📱 Add Test Notifications
-              </button>
-            </div>
-
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '12px',
-              padding: '16px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}>
-              <h3 style={{marginBottom: '16px'}}>Recent Activity</h3>
-              {notifications.length === 0 ? (
-                <p style={{textAlign: 'center', color: '#666', padding: '24px'}}>
-                  No notifications yet. Click the test button above!
-                </p>
-              ) : (
-                <div>
-                  {notifications.map(notif => (
-                    <div key={notif.id} style={{
-                      padding: '12px',
-                      backgroundColor: notif.type === 'email' ? '#f8fafc' : '#f0fdf4',
-                      borderRadius: '8px',
-                      marginBottom: '8px',
-                      border: `1px solid ${notif.type === 'email' ? '#e2e8f0' : '#dcfce7'}`
-                    }}>
-                      <p style={{fontWeight: '500', margin: '0 0 4px 0'}}>{notif.message}</p>
-                      <p style={{fontSize: '12px', color: '#666', margin: 0}}>{notif.time}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'appointments' && (
-          <div>
-            <h2 style={{fontSize: '20px', fontWeight: 'bold', marginBottom: '16px'}}>📅 Appointments</h2>
-            <p>Appointments feature coming soon...</p>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Navigation */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'white',
-        borderTop: '1px solid #e5e7eb',
-        padding: '8px'
-      }}>
-        <div style={{display: 'flex', justifyContent: 'space-around'}}>
-          {[
-            {id: 'dashboard', label: 'Dashboard', icon: '📊'},
-            {id: 'ai-notes', label: 'AI Notes', icon: '🤖'},
-            {id: 'notifications', label: 'Notifications', icon: '🔔'},
-            {id: 'appointments', label: 'Appointments', icon: '📅'}
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '8px',
-                border: 'none',
-                background: 'none',
-                cursor: 'pointer',
-                color: activeTab === tab.id ? '#2563eb' : '#666'
-              }}
-            >
-              <span style={{fontSize: '20px', marginBottom: '4px'}}>{tab.icon}</span>
-              <span style={{fontSize: '12px'}}>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Side Menu */}
-      {isMobileMenuOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          zIndex: 50
-        }} onClick={() => setIsMobileMenuOpen(false)}>
-          <div style={{
-            width: '280px',
-            height: '100%',
-            backgroundColor: 'white',
-            padding: '0'
-          }} onClick={e => e.stopPropagation()}>
-            
-            <div style={{
-              padding: '24px',
-              borderBottom: '1px solid #e5e7eb',
-              backgroundColor: '#f8fafc'
-            }}>
-              <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  backgroundColor: '#2563eb',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white'
-                }}>
-                  <UserIcon />
-                </div>
-                <div>
-                  <h3 style={{margin: 0, fontWeight: '600'}}>{currentUser.name}</h3>
-                  <p style={{margin: 0, fontSize: '14px', color: '#666', textTransform: 'capitalize'}}>
-                    {currentUser.role}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <nav style={{padding: '16px'}}>
-              {[
-                {id: 'dashboard', label: 'Dashboard', icon: '📊'},
-                {id: 'ai-notes', label: 'AI Notes', icon: '🤖'},
-                {id: 'notifications', label: 'Notifications', icon: '🔔'},
-                {id: 'appointments', label: 'Appointments', icon: '📅'}
-              ].map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    border: 'none',
-                    background: activeTab === item.id ? '#dbeafe' : 'transparent',
-                    borderRadius: '8px',
-                    marginBottom: '4px',
-                    cursor: 'pointer',
-                    fontSize: '16px',
-                    color: activeTab === item.id ? '#2563eb' : '#374151'
-                  }}
-                >
-                  <span style={{fontSize: '20px'}}>{item.icon}</span>
-                  <span style={{fontWeight: '500'}}>{item.label}</span>
+                <button onclick="showTab('clients')" class="mobile-nav-item" data-tab="clients">
+                    <span class="nav-icon">👥</span>
+                    Clients
                 </button>
-              ))}
+                <button onclick="showTab('notes')" class="mobile-nav-item" data-tab="notes">
+                    <span class="nav-icon">🤖</span>
+                    AI Notes
+                </button>
+                <button onclick="showTab('documents')" class="mobile-nav-item" data-tab="documents">
+                    <span class="nav-icon">📋</span>
+                    Documents
+                </button>
+                <button onclick="showTab('team')" class="mobile-nav-item" data-tab="team">
+                    <span class="nav-icon">👨‍⚕️</span>
+                    Team
+                </button>
             </nav>
 
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: '16px',
-              borderTop: '1px solid #e5e7eb'
-            }}>
-              <button
-                onClick={() => {
-                  setCurrentUser(null);
-                  setIsMobileMenuOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                🚪 Logout
-              </button>
-            </div>
-          </div>
+            <!-- Desktop Navigation -->
+            <nav class="desktop-nav">
+                <div class="nav-header">
+                    <h2>🏥 HIPAA Portal</h2>
+                    <span class="user-badge">Dr. Smith</span>
+                </div>
+                <button onclick="showTab('dashboard')" class="nav-item active" data-tab="dashboard">
+                    <span class="nav-icon">📊</span>
+                    Dashboard
+                </button>
+                <button onclick="showTab('appointments')" class="nav-item" data-tab="appointments">
+                    <span class="nav-icon">📅</span>
+                    Appointments
+                </button>
+                <button onclick="showTab('clients')" class="nav-item" data-tab="clients">
+                    <span class="nav-icon">👥</span>
+                    Clients
+                </button>
+                <button onclick="showTab('notes')" class="nav-item" data-tab="notes">
+                    <span class="nav-icon">🤖</span>
+                    AI Notes
+                </button>
+                <button onclick="showTab('documents')" class="nav-item" data-tab="documents">
+                    <span class="nav-icon">📋</span>
+                    Documents
+                </button>
+                <button onclick="showTab('team')" class="nav-item" data-tab="team">
+                    <span class="nav-icon">👨‍⚕️</span>
+                    Team
+                </button>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Dashboard -->
+                <div id="dashboard" class="content-section">
+                    <h2>📊 Dashboard</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Today's Appointments</h3>
+                            <div class="stat-number">8</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Active Clients</h3>
+                            <div class="stat-number">124</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>HIPAA Compliance</h3>
+                            <div class="stat-status">✅ Active</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Pending Notes</h3>
+                            <div class="stat-number">3</div>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-activity">
+                        <h3>Recent Activity</h3>
+                        <div class="activity-list">
+                            <div class="activity-item">
+                                <span class="activity-icon">📅</span>
+                                <span>Appointment with Sarah Johnson at 2:00 PM</span>
+                            </div>
+                            <div class="activity-item">
+                                <span class="activity-icon">📝</span>
+                                <span>AI Notes generated for Michael Brown</span>
+                            </div>
+                            <div class="activity-item">
+                                <span class="activity-icon">📋</span>
+                                <span>Treatment plan updated for Lisa Davis</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appointments -->
+                <div id="appointments" class="content-section hidden">
+                    <h2>📅 Appointments</h2>
+                    <div class="appointments-container">
+                        <div class="appointment-card">
+                            <div class="appointment-time">2:00 PM</div>
+                            <div class="appointment-info">
+                                <h4>Sarah Johnson</h4>
+                                <p>Therapy Session</p>
+                                <button class="btn-primary">Join Video Call</button>
+                            </div>
+                        </div>
+                        <div class="appointment-card">
+                            <div class="appointment-time">3:30 PM</div>
+                            <div class="appointment-info">
+                                <h4>Michael Brown</h4>
+                                <p>Initial Consultation</p>
+                                <button class="btn-secondary">View Details</button>
+                            </div>
+                        </div>
+                        <div class="appointment-card">
+                            <div class="appointment-time">5:00 PM</div>
+                            <div class="appointment-info">
+                                <h4>Lisa Davis</h4>
+                                <p>Follow-up Session</p>
+                                <button class="btn-primary">Join Video Call</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients -->
+                <div id="clients" class="content-section hidden">
+                    <h2>👥 Client Management</h2>
+                    <div class="client-search">
+                        <input type="text" placeholder="Search clients..." class="search-input" />
+                    </div>
+                    <div class="client-list">
+                        <div class="client-card">
+                            <div class="client-info">
+                                <h4>Sarah Johnson</h4>
+                                <p>Last session: 2 days ago</p>
+                            </div>
+                            <div class="client-actions">
+                                <button class="btn-small">View File</button>
+                                <button class="btn-small">Schedule</button>
+                            </div>
+                        </div>
+                        <div class="client-card">
+                            <div class="client-info">
+                                <h4>Michael Brown</h4>
+                                <p>Last session: 5 days ago</p>
+                            </div>
+                            <div class="client-actions">
+                                <button class="btn-small">View File</button>
+                                <button class="btn-small">Schedule</button>
+                            </div>
+                        </div>
+                        <div class="client-card">
+                            <div class="client-info">
+                                <h4>Lisa Davis</h4>
+                                <p>Last session: 1 week ago</p>
+                            </div>
+                            <div class="client-actions">
+                                <button class="btn-small">View File</button>
+                                <button class="btn-small">Schedule</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Notes -->
+                <div id="notes" class="content-section hidden">
+                    <h2>🤖 AI Clinical Notes</h2>
+                    <div class="notes-generator">
+                        <textarea class="notes-input" placeholder="Enter session details for AI note generation..." rows="4"></textarea>
+                        <button onclick="generateNotes()" class="btn-primary">🤖 Generate AI Notes</button>
+                    </div>
+                    
+                    <div id="generatedNotes" class="generated-notes" style="display: none;">
+                        <h3>Generated Clinical Note</h3>
+                        <div class="note-content">
+                            <p><strong>Client:</strong> <span id="noteClient">Sarah Johnson</span></p>
+                            <p><strong>Date:</strong> <span id="noteDate"></span></p>
+                            <p><strong>Session Type:</strong> Individual Therapy</p>
+                            <p><strong>Progress:</strong> Client demonstrated improved coping strategies and reduced anxiety symptoms.</p>
+                            <p><strong>Plan:</strong> Continue CBT techniques, homework assignment for thought tracking.</p>
+                        </div>
+                        <button class="btn-secondary">Save to Client File</button>
+                    </div>
+                </div>
+
+                <!-- Documents -->
+                <div id="documents" class="content-section hidden">
+                    <h2>📋 Documents</h2>
+                    <p>Document management system coming soon...</p>
+                </div>
+
+                <!-- Team -->
+                <div id="team" class="content-section hidden">
+                    <h2>👨‍⚕️ Team Management</h2>
+                    <p>Team management features coming soon...</p>
+                </div>
+            </main>
+
+            <!-- Mobile Overlay -->
+            <div id="mobileOverlay" class="mobile-overlay" onclick="closeMenu()"></div>
         </div>
-      )}
     </div>
-  );
-}
+
+    <script>
+        let isRecording = false;
+        let recordingStartTime = null;
+        let recordingInterval = null;
+
+        function login() {
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('mainPortal').classList.remove('hidden');
+        }
+
+        function toggleMenu() {
+            const nav = document.getElementById('mobileNav');
+            const overlay = document.getElementById('mobileOverlay');
+            nav.classList.add('open');
+            overlay.style.display = 'block';
+        }
+
+        function closeMenu() {
+            const nav = document.getElementById('mobileNav');
+            const overlay = document.getElementById('mobileOverlay');
+            nav.classList.remove('open');
+            overlay.style.display = 'none';
+        }
+
+        function showTab(tabName) {
+            // Hide all content sections
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.add('hidden'));
+
+            // Show selected section
+            const targetSection = document.getElementById(tabName);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+
+            // Update navigation active states
+            const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-tab') === tabName) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Close mobile menu
+            closeMenu();
+        }
+
+        function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const status = document.getElementById('recordingStatus');
+
+            if (!isRecording) {
+                // Start recording
+                isRecording = true;
+                recordingStartTime = Date.now();
+                recordBtn.textContent = '⏹️ Stop Recording';
+                recordBtn.classList.remove('btn-primary');
+                recordBtn.classList.add('btn-secondary');
+                uploadBtn.style.display = 'inline-block';
+                status.style.display = 'flex';
+
+                // Start timer
+                recordingInterval = setInterval(updateRecordingTime, 1000);
+            } else {
+                // Stop recording
+                isRecording = false;
+                recordBtn.textContent = '🎙️ Start Recording';
+                recordBtn.classList.remove('btn-secondary');
+                recordBtn.classList.add('btn-primary');
+                status.style.display = 'none';
+                clearInterval(recordingInterval);
+                
+                // Show success message
+                alert('Recording saved! AI will process the audio for note generation.');
+            }
+        }
+
+        function updateRecordingTime() {
+            if (recordingStartTime) {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('recordingTime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function uploadAudio() {
+            document.getElementById('audioFile').click();
+        }
+
+        function handleAudioUpload() {
+            const file = document.getElementById('audioFile').files[0];
+            if (file) {
+                alert(`Audio file "${file.name}" uploaded successfully! AI will process it for note generation.`);
+            }
+        }
+
+        function generateNotes() {
+            const client = document.getElementById('clientSelect').value;
+            const serviceCode = document.getElementById('serviceCode').value;
+            const sessionNotes = document.getElementById('sessionNotes').value;
+
+            if (!client) {
+                alert('Please select a client first.');
+                return;
+            }
+
+            if (!serviceCode) {
+                alert('Please select a service code.');
+                return;
+            }
+
+            // Update the generated note with selected values
+            const clientNames = {
+                'sarah_johnson': 'Sarah Johnson',
+                'michael_brown': 'Michael Brown',
+                'lisa_davis': 'Lisa Davis',
+                'john_smith': 'John Smith'
+            };
+
+            const serviceCodes = {
+                '90837': '90837 - Psychotherapy, 60 minutes',
+                '00000': '00000 - Initial Assessment',
+                '00001': '00001 - Follow-up Assessment',
+                '0592T': '0592T - Digital Therapeutics',
+                '90791': '90791 - Psychiatric Diagnostic Evaluation',
+                '90792': '90792 - Psychiatric Diagnostic Evaluation with Medical Services',
+                '90834': '90834 - Psychotherapy, 45 minutes',
+                '90846': '90846 - Family Therapy without Patient',
+                '90847': '90847 - Family Therapy with Patient',
+                '90853': '90853 - Group Psychotherapy',
+                '99205': '99205 - Office Visit, New Patient, 60-74 minutes',
+                '99214': '99214 - Office Visit, Established Patient, 30-39 minutes',
+                'H0001': 'H0001 - Alcohol/Drug Assessment',
+                '+90833': '+90833 - Psychotherapy Add-on Code'
+            };
+
+            document.getElementById('noteClient').textContent = clientNames[client] || client;
+            document.getElementById('noteServiceCode').textContent = serviceCodes[serviceCode] || serviceCode;
+            document.getElementById('noteDate').textContent = new Date().toLocaleDateString();
+
+            // Show enhanced note based on service type
+            if (serviceCode === '90791' || serviceCode === '90792') {
+                document.getElementById('noteSessionType').textContent = 'Psychiatric Evaluation';
+                document.getElementById('noteDuration').textContent = '90 minutes';
+                document.getElementById('noteConcerns').textContent = 'Initial psychiatric assessment, mood evaluation';
+                document.getElementById('noteInterventions').textContent = 'Clinical interview, mental status exam, risk assessment';
+            } else if (serviceCode === '90853') {
+                document.getElementById('noteSessionType').textContent = 'Group Therapy';
+                document.getElementById('noteDuration').textContent = '90 minutes';
+                document.getElementById('noteConcerns').textContent = 'Group dynamics, interpersonal relationships';
+                document.getElementById('noteInterventions').textContent = 'Group process facilitation, psychoeducation';
+            } else if (serviceCode === '90846' || serviceCode === '90847') {
+                document.getElementById('noteSessionType').textContent = 'Family Therapy';
+                document.getElementById('noteDuration').textContent = '50 minutes';
+                document.getElementById('noteConcerns').textContent = 'Family communication, relationship dynamics';
+                document.getElementById('noteInterventions').textContent = 'Family systems therapy, communication skills training';
+            } else {
+                document.getElementById('noteSessionType').textContent = 'Individual Therapy';
+                document.getElementById('noteDuration').textContent = serviceCode === '90834' ? '45 minutes' : '60 minutes';
+                document.getElementById('noteConcerns').textContent = 'Anxiety, stress management, mood regulation';
+                document.getElementById('noteInterventions').textContent = 'CBT techniques, mindfulness exercises, coping strategies';
+            }
+
+            const notesDiv = document.getElementById('generatedNotes');
+            notesDiv.style.display = 'block';
+            notesDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Portal initialized successfully');
+        });
+    </script>
+</body>
+</html>
