@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-export default function MindCarePortalClinical() {
+export default function MindCarePortal() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState('');
   const [userName, setUserName] = useState('');
@@ -8,6 +8,7 @@ export default function MindCarePortalClinical() {
   const [selectedClient, setSelectedClient] = useState(null);
   const [activeNote, setActiveNote] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [clinicalNotes, setClinicalNotes] = useState([]);
 
   const clients = [
     {
@@ -22,19 +23,6 @@ export default function MindCarePortalClinical() {
       riskLevel: 'Low'
     }
   ];
-
-  const [clinicalNotes, setClinicalNotes] = useState([]);
-
-  const createClinicalNote = (clientId, noteData) => {
-    const newNote = {
-      id: Date.now(),
-      clientId,
-      date: new Date().toISOString(),
-      clinician: userName,
-      ...noteData
-    };
-    setClinicalNotes(prev => [...prev, newNote]);
-  };
 
   const loginWithGoogle = (accountType) => {
     setIsLoading(true);
@@ -52,6 +40,17 @@ export default function MindCarePortalClinical() {
     setUserType('');
     setUserName('');
     setActiveTab('dashboard');
+  };
+
+  const createClinicalNote = (clientId, noteData) => {
+    const newNote = {
+      id: Date.now(),
+      clientId,
+      date: new Date().toISOString(),
+      clinician: userName,
+      ...noteData
+    };
+    setClinicalNotes(prev => [...prev, newNote]);
   };
 
   if (!isLoggedIn) {
@@ -280,7 +279,7 @@ export default function MindCarePortalClinical() {
                       fontWeight: '600'
                     }}
                   >
-                    Add Clinical Note
+                    Add DAP Note
                   </button>
                   <button
                     onClick={() => setActiveTab('asam-assessment')}
