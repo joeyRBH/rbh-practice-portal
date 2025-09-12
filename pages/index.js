@@ -64,6 +64,8 @@ export default function MindCarePortal() {
 
   // Real Google Calendar integration
   const connectGoogleCalendar = () => {
+    if (typeof window === 'undefined') return;
+    
     setIsLoading(true);
     
     // Real OAuth 2.0 flow for Google Calendar
@@ -81,6 +83,8 @@ export default function MindCarePortal() {
 
   // Real Gmail API integration  
   const connectGmailAPI = () => {
+    if (typeof window === 'undefined') return;
+    
     setIsLoading(true);
     
     // Real OAuth 2.0 flow for Gmail
