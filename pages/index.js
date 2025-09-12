@@ -1,59 +1,263 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, FileText, MessageCircle, User, LogOut, Plus, DollarSign, Users, Home, Check, X, Mail, Clock, Phone, Settings, Download, Upload, Eye, Lock } from 'lucide-react';
 
-export default function MindCarePortal() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState('');
-  const [userName, setUserName] = useState('');
+const MindCareEHRPortal = () => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userType, setUserType] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [activeNote, setActiveNote] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [clinicalNotes, setClinicalNotes] = useState([]);
-
-  const clients = [
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [emails, setEmails] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [intakeDocuments, setIntakeDocuments] = useState([]);
+  
+  // Sample client data with more comprehensive info
+  const [clients, setClients] = useState([
     {
       id: 1,
       firstName: 'Sarah',
       lastName: 'Johnson',
       email: 'sarah.johnson@email.com',
+      phone: '555-0123',
       dateOfBirth: '1985-06-15',
       primaryDiagnosis: 'F32.1 - Major Depressive Disorder, Moderate',
       treatmentPlan: 'CBT, 12 sessions',
       currentLevel: 'Level 1 - Outpatient',
-      riskLevel: 'Low'
+      riskLevel: 'Low',
+      balance: 150,
+      lastSession: '2025-09-05',
+      nextAppointment: '2025-09-12 10:00 AM',
+      intakeCompleted: true,
+      consentSigned: true,
+      hipaaAcknowledged: true
+    }
+  ]);
+
+  // Comprehensive intake forms based on provided documents
+  const intakeFormTemplates = [
+    {
+      id: 'individual-intake',
+      name: 'Individual Intake Questionnaire',
+      category: 'Assessment',
+      description: 'Comprehensive intake assessment for new clients',
+      required: true,
+      sections: [
+        'Contact Information',
+        'Presenting Problem',
+        'Treatment Goals',
+        'Safety Assessment',
+        'Family History',
+        'Sleep & Rest',
+        'Diet & Eating',
+        'Exercise & Activities',
+        'Support System',
+        'Medical History',
+        'Medications',
+        'Substance Use'
+      ]
+    },
+    {
+      id: 'consent-psychotherapy',
+      name: 'Informed Consent for Psychotherapy',
+      category: 'Legal',
+      description: 'Informed consent for therapeutic services',
+      required: true
+    },
+    {
+      id: 'privacy-practices',
+      name: 'Notice of Privacy Practices',
+      category: 'HIPAA',
+      description: 'HIPAA privacy notice acknowledgment',
+      required: true
+    },
+    {
+      id: 'practice-policies',
+      name: 'Practice Policies',
+      category: 'Administrative',
+      description: 'Office policies and procedures',
+      required: true
+    },
+    {
+      id: 'ai-consent',
+      name: 'AI Tools Consent Form',
+      category: 'Technology',
+      description: 'Consent for use of AI tools in therapy services',
+      required: false
+    },
+    {
+      id: 'disclosure-authorization',
+      name: 'Authorization for Disclosure',
+      category: 'Legal',
+      description: 'Authorization to release information',
+      required: false
+    },
+    {
+      id: 'audit-alcohol',
+      name: 'AUDIT - Alcohol Screening',
+      category: 'Screening',
+      description: 'Alcohol Use Disorders Identification Test',
+      required: false
+    },
+    {
+      id: 'dast-10',
+      name: 'DAST-10 - Drug Screening',
+      category: 'Screening',
+      description: 'Drug Abuse Screening Test',
+      required: false
+    },
+    {
+      id: 'ace-questionnaire',
+      name: 'ACE Questionnaire',
+      category: 'Screening',
+      description: 'Adverse Childhood Experiences assessment',
+      required: false
+    },
+    {
+      id: 'asrs-adhd',
+      name: 'ASRS ADHD Scale',
+      category: 'Screening',
+      description: 'Adult ADHD Self-Report Scale',
+      required: false
+    },
+    {
+      id: 'biopsychosocial',
+      name: 'Biopsychosocial Assessment',
+      category: 'Assessment',
+      description: 'Comprehensive biopsychosocial evaluation',
+      required: false
+    },
+    {
+      id: 'testimonial-release',
+      name: 'Testimonial Release Form',
+      category: 'Marketing',
+      description: 'Client testimonial authorization',
+      required: false
     }
   ];
 
-  const loginWithGoogle = (accountType) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setUserType(accountType);
-      setUserName(accountType === 'clinician' ? 'Dr. Sarah Wilson' : 'Sarah Johnson');
-      setIsLoggedIn(true);
-      setIsLoading(false);
-      setActiveTab(accountType === 'clinician' ? 'dashboard' : 'client-portal');
-    }, 1500);
+  // Sample emails from Gmail integration
+  const sampleEmails = [
+    {
+      id: 1,
+      from: 'sarah.johnson@email.com',
+      subject: 'Question about homework assignment',
+      snippet: 'Hi Dr. Wilson, I had a question about the CBT worksheet you assigned...',
+      date: '2025-09-11',
+      read: false,
+      labels: ['client-communication']
+    },
+    {
+      id: 2,
+      from: 'appointments@mindcareportal.com',
+      subject: 'Appointment Reminder - Tomorrow 10:00 AM',
+      snippet: 'This is a reminder for your upcoming appointment...',
+      date: '2025-09-11',
+      read: true,
+      labels: ['automated']
+    }
+  ];
+
+  // Google Services Integration Functions
+  const connectGmail = async () => {
+    if (window.confirm('Connect Gmail for secure client communication?\n\nThis will enable:\n• Secure client messaging\n• Appointment reminders\n• HIPAA-compliant email management\n\nNote: Requires Google Workspace Business with BAA')) {
+      // Simulate OAuth2 flow
+      setGmailConnected(true);
+      setEmails(sampleEmails);
+      alert('✅ Gmail connected successfully!\n\nRemember to:\n1. Set up Google Workspace Business\n2. Sign Business Associate Agreement\n3. Configure secure email filters');
+    }
   };
 
-  const logout = () => {
-    setIsLoggedIn(false);
-    setUserType('');
-    setUserName('');
+  const connectGoogleCalendar = async () => {
+    if (window.confirm('Connect Google Calendar for appointment scheduling?\n\nThis will enable:\n• Automated scheduling\n• Client booking links\n• Reminder notifications\n• HIPAA-compliant calendar management')) {
+      setCalendarConnected(true);
+      setAppointments([
+        {
+          id: 1,
+          clientId: 1,
+          clientName: 'Sarah Johnson',
+          date: '2025-09-12',
+          time: '10:00 AM',
+          service: 'Individual Therapy - 50 min',
+          status: 'Confirmed',
+          meetingLink: 'https://meet.google.com/abc-defg-hij',
+          reminderSent: true
+        },
+        {
+          id: 2,
+          clientId: 1,
+          clientName: 'Sarah Johnson',
+          date: '2025-09-19',
+          time: '10:00 AM',
+          service: 'Individual Therapy - 50 min',
+          status: 'Scheduled',
+          meetingLink: 'https://meet.google.com/xyz-uvwx-rst',
+          reminderSent: false
+        }
+      ]);
+      alert('✅ Google Calendar connected!\n\nFeatures now available:\n• Automated appointment scheduling\n• Client self-booking\n• Email reminders\n• Google Meet integration');
+    }
+  };
+
+  const sendEmail = async (to, subject, body) => {
+    // Simulate sending email via Gmail API
+    if (!gmailConnected) {
+      alert('Please connect Gmail first');
+      return;
+    }
+    
+    const newEmail = {
+      id: emails.length + 1,
+      from: 'dr.wilson@mindcareportal.com',
+      to: to,
+      subject: subject,
+      body: body,
+      date: new Date().toISOString().split('T')[0],
+      sent: true,
+      hipaaCompliant: true
+    };
+    
+    alert('✅ Secure email sent successfully!\n\nEmail features:\n• End-to-end encryption\n• HIPAA compliance logging\n• Automatic archiving');
+  };
+
+  // Login Functions
+  const loginAsClient = () => {
+    setCurrentUser({ id: 1, name: 'Sarah Johnson' });
+    setUserType('client');
     setActiveTab('dashboard');
   };
 
-  const createClinicalNote = (clientId, noteData) => {
-    const newNote = {
-      id: Date.now(),
-      clientId,
-      date: new Date().toISOString(),
-      clinician: userName,
-      ...noteData
-    };
-    setClinicalNotes(prev => [...prev, newNote]);
+  const loginAsTherapist = () => {
+    setCurrentUser({ id: 1, name: 'Dr. Rebecca Wilson' });
+    setUserType('therapist');
+    setActiveTab('dashboard');
   };
 
-  if (!isLoggedIn) {
+  const logout = () => {
+    setCurrentUser(null);
+    setUserType(null);
+    setActiveTab('dashboard');
+  };
+
+  // Intake Documentation Functions
+  const generateIntakePacket = (clientId) => {
+    const requiredForms = intakeFormTemplates.filter(form => form.required);
+    alert(`📋 Intake packet generated for client!\n\nRequired forms (${requiredForms.length}):\n${requiredForms.map(f => '• ' + f.name).join('\n')}\n\nOptional assessments available in client portal.`);
+  };
+
+  const sendIntakeInvitation = async (clientEmail) => {
+    if (gmailConnected) {
+      await sendEmail(
+        clientEmail,
+        'Complete Your Intake Forms - MindCare Portal',
+        `Dear Client,\n\nPlease complete your intake forms before your first appointment:\n\n🔗 Secure Portal: https://portal.mindcare.com/intake\n\nRequired forms:\n• Individual Intake Questionnaire\n• Informed Consent\n• Privacy Practices Acknowledgment\n\nThis secure portal is HIPAA-compliant.\n\nBest regards,\nMindCare Portal Team`
+      );
+    }
+  };
+
+  // Login Screen
+  if (!currentUser) {
     return (
       <div style={{ 
         minHeight: '100vh', 
@@ -80,16 +284,15 @@ export default function MindCarePortal() {
             fontSize: '2.25rem',
             fontWeight: 'bold'
           }}>
-            MindCare Portal
+            MindCare EHR Portal
           </h1>
           <p style={{ color: '#64748b', marginBottom: '2rem', fontSize: '1.125rem' }}>
-            Clinical Management System
+            HIPAA-Compliant Electronic Health Records
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <button
-              onClick={() => loginWithGoogle('clinician')}
-              disabled={isLoading}
+              onClick={loginAsTherapist}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
@@ -99,16 +302,14 @@ export default function MindCarePortal() {
                 borderRadius: '12px',
                 fontSize: '1.1rem',
                 fontWeight: '600',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading ? 0.7 : 1
+                cursor: 'pointer'
               }}
             >
-              {isLoading ? 'Connecting...' : '👨‍⚕️ Clinician Login'}
+              👨‍⚕️ Clinician Portal
             </button>
 
             <button
-              onClick={() => loginWithGoogle('client')}
-              disabled={isLoading}
+              onClick={loginAsClient}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
@@ -118,11 +319,10 @@ export default function MindCarePortal() {
                 borderRadius: '12px',
                 fontSize: '1.1rem',
                 fontWeight: '600',
-                cursor: isLoading ? 'not-allowed' : 'pointer',
-                opacity: isLoading ? 0.7 : 1
+                cursor: 'pointer'
               }}
             >
-              {isLoading ? 'Connecting...' : '🧑‍💼 Client Portal'}
+              🧑‍💼 Client Portal
             </button>
           </div>
 
@@ -132,11 +332,12 @@ export default function MindCarePortal() {
             backgroundColor: '#f8fafc',
             borderRadius: '12px'
           }}>
-            <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>🔒 Secure Authentication</h4>
-            <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-              <p style={{ margin: '0.25rem 0' }}>✅ HIPAA-compliant security</p>
-              <p style={{ margin: '0.25rem 0' }}>✅ Role-based access control</p>
-              <p style={{ margin: '0.25rem 0' }}>✅ End-to-end encryption</p>
+            <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>🔗 Google Integration</h4>
+            <div style={{ fontSize: '0.875rem', color: '#64748b', textAlign: 'left' }}>
+              <p style={{ margin: '0.25rem 0' }}>✅ Gmail secure messaging</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ Google Calendar scheduling</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ Google Meet telehealth</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ HIPAA-compliant BAA</p>
             </div>
           </div>
         </div>
@@ -144,12 +345,834 @@ export default function MindCarePortal() {
     );
   }
 
+  // Navigation based on user type
+  const navItems = userType === 'client' ? [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'appointments', label: 'Appointments', icon: Calendar },
+    { id: 'intake', label: 'Intake Forms', icon: FileText },
+    { id: 'messages', label: 'Messages', icon: MessageCircle },
+    { id: 'billing', label: 'Billing', icon: DollarSign }
+  ] : [
+    { id: 'dashboard', label: 'Dashboard', icon: Home },
+    { id: 'clients', label: 'Client Management', icon: Users },
+    { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'email', label: 'Secure Email', icon: Mail },
+    { id: 'intake-admin', label: 'Intake Management', icon: FileText },
+    { id: 'clinical-notes', label: 'Clinical Notes', icon: FileText },
+    { id: 'billing', label: 'Billing', icon: DollarSign },
+    { id: 'integrations', label: 'Integrations', icon: Settings }
+  ];
+
+  // Render main content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '16px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>📊 Quick Stats</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#dbeafe', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e40af' }}>{clients.length}</div>
+                  <div style={{ fontSize: '0.875rem', color: '#1e40af' }}>Active Clients</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#166534' }}>{appointments.length}</div>
+                  <div style={{ fontSize: '0.875rem', color: '#166534' }}>Appointments</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2rem',
+              borderRadius: '16px',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>🔗 Google Integration</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Gmail</span>
+                  {gmailConnected ? (
+                    <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Check size={16} />
+                      <span style={{ fontSize: '0.875rem' }}>Connected</span>
+                    </div>
+                  ) : (
+                    <button onClick={connectGmail} style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Google Calendar</span>
+                  {calendarConnected ? (
+                    <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Check size={16} />
+                      <span style={{ fontSize: '0.875rem' }}>Connected</span>
+                    </div>
+                  ) : (
+                    <button onClick={connectGoogleCalendar} style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}>
+                      Connect
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'email':
+        return (
+          <div style={{ space: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ margin: 0, color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+                📧 Secure Email
+              </h2>
+              {gmailConnected && (
+                <button
+                  onClick={() => alert('Compose new secure email')}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  ✍️ Compose
+                </button>
+              )}
+            </div>
+
+            {!gmailConnected ? (
+              <div style={{
+                backgroundColor: 'white',
+                padding: '3rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center'
+              }}>
+                <Mail size={48} style={{ color: '#64748b', marginBottom: '1rem' }} />
+                <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Connect Gmail for Secure Messaging</h3>
+                <p style={{ color: '#64748b', marginBottom: '2rem' }}>
+                  Enable HIPAA-compliant client communication with Gmail integration
+                </p>
+                <button onClick={connectGmail} style={{
+                  padding: '1rem 2rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  🔗 Connect Gmail
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0',
+                overflow: 'hidden'
+              }}>
+                {emails.map(email => (
+                  <div key={email.id} style={{
+                    padding: '1.5rem',
+                    borderBottom: '1px solid #e2e8f0',
+                    cursor: 'pointer',
+                    backgroundColor: !email.read ? '#f0f9ff' : 'white'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: email.read ? 'normal' : 'bold', color: '#1e293b' }}>
+                          {email.subject}
+                        </h4>
+                        <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', color: '#64748b' }}>
+                          From: {email.from}
+                        </p>
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                        {email.date}
+                      </div>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
+                      {email.snippet}
+                    </p>
+                    {email.labels && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        {email.labels.map(label => (
+                          <span key={label} style={{
+                            backgroundColor: '#dbeafe',
+                            color: '#1e40af',
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            marginRight: '0.5rem'
+                          }}>
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'calendar':
+        return (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ margin: 0, color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+                📅 Calendar Management
+              </h2>
+              {calendarConnected && (
+                <button
+                  onClick={() => alert('Create new appointment')}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  ➕ New Appointment
+                </button>
+              )}
+            </div>
+
+            {!calendarConnected ? (
+              <div style={{
+                backgroundColor: 'white',
+                padding: '3rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center'
+              }}>
+                <Calendar size={48} style={{ color: '#64748b', marginBottom: '1rem' }} />
+                <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Connect Google Calendar</h3>
+                <p style={{ color: '#64748b', marginBottom: '2rem' }}>
+                  Enable automated scheduling, client booking, and appointment management
+                </p>
+                <button onClick={connectGoogleCalendar} style={{
+                  padding: '1rem 2rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  🔗 Connect Google Calendar
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '2rem' }}>
+                {appointments.map(appointment => (
+                  <div key={appointment.id} style={{
+                    backgroundColor: 'white',
+                    padding: '2rem',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                      <div>
+                        <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.25rem' }}>
+                          {appointment.clientName}
+                        </h3>
+                        <p style={{ margin: '0.5rem 0', color: '#64748b' }}>
+                          {appointment.service}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#374151' }}>
+                          <span>📅 {appointment.date}</span>
+                          <span>🕐 {appointment.time}</span>
+                        </div>
+                      </div>
+                      <span style={{
+                        backgroundColor: appointment.status === 'Confirmed' ? '#dcfce7' : '#fef3c7',
+                        color: appointment.status === 'Confirmed' ? '#166534' : '#92400e',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '20px',
+                        fontSize: '0.875rem',
+                        fontWeight: '600'
+                      }}>
+                        {appointment.status}
+                      </span>
+                    </div>
+                    
+                    {appointment.meetingLink && (
+                      <div style={{ 
+                        backgroundColor: '#f0f9ff', 
+                        padding: '1rem', 
+                        borderRadius: '8px',
+                        marginTop: '1rem'
+                      }}>
+                        <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1e40af' }}>
+                          🎥 Google Meet Link
+                        </p>
+                        <a 
+                          href={appointment.meetingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.875rem' }}
+                        >
+                          {appointment.meetingLink}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'intake-admin':
+        return (
+          <div>
+            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+              📋 Intake Management System
+            </h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+              {/* Intake Forms Library */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h3 style={{ margin: '0 0 1.5rem 0', color: '#1e293b' }}>📚 Form Templates</h3>
+                
+                {/* Categories */}
+                {['Assessment', 'Legal', 'HIPAA', 'Screening', 'Administrative'].map(category => {
+                  const categoryForms = intakeFormTemplates.filter(form => form.category === category);
+                  return (
+                    <div key={category} style={{ marginBottom: '1.5rem' }}>
+                      <h4 style={{ 
+                        margin: '0 0 0.75rem 0', 
+                        color: '#374151', 
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        borderBottom: '1px solid #e5e7eb',
+                        paddingBottom: '0.5rem'
+                      }}>
+                        {category} ({categoryForms.length})
+                      </h4>
+                      {categoryForms.map(form => (
+                        <div key={form.id} style={{
+                          padding: '0.75rem',
+                          backgroundColor: '#f8fafc',
+                          borderRadius: '8px',
+                          marginBottom: '0.5rem',
+                          cursor: 'pointer',
+                          border: '1px solid #e2e8f0'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
+                                {form.name}
+                                {form.required && (
+                                  <span style={{ color: '#dc2626', marginLeft: '0.25rem' }}>*</span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                {form.description}
+                              </div>
+                            </div>
+                            <Eye size={16} style={{ color: '#64748b' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Client Intake Status */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <h3 style={{ margin: 0, color: '#1e293b' }}>👥 Client Intake Status</h3>
+                  <button
+                    onClick={() => generateIntakePacket(1)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    📦 Generate Packet
+                  </button>
+                </div>
+
+                {clients.map(client => (
+                  <div key={client.id} style={{
+                    padding: '1.5rem',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    marginBottom: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4 style={{ margin: 0, color: '#1e293b' }}>
+                        {client.firstName} {client.lastName}
+                      </h4>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => sendIntakeInvitation(client.email)}
+                          style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: '#2563eb',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem'
+                          }}
+                        >
+                          📧 Send Invitation
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                      <div style={{
+                        backgroundColor: client.intakeCompleted ? '#dcfce7' : '#fef2f2',
+                        color: client.intakeCompleted ? '#166534' : '#dc2626',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        fontSize: '0.75rem'
+                      }}>
+                        📋 Intake: {client.intakeCompleted ? 'Complete' : 'Pending'}
+                      </div>
+                      
+                      <div style={{
+                        backgroundColor: client.consentSigned ? '#dcfce7' : '#fef2f2',
+                        color: client.consentSigned ? '#166534' : '#dc2626',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        fontSize: '0.75rem'
+                      }}>
+                        ✍️ Consent: {client.consentSigned ? 'Signed' : 'Pending'}
+                      </div>
+                      
+                      <div style={{
+                        backgroundColor: client.hipaaAcknowledged ? '#dcfce7' : '#fef2f2',
+                        color: client.hipaaAcknowledged ? '#166534' : '#dc2626',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        textAlign: 'center',
+                        fontSize: '0.75rem'
+                      }}>
+                        🔒 HIPAA: {client.hipaaAcknowledged ? 'Ack.' : 'Pending'}
+                      </div>
+                    </div>
+
+                    <div style={{ 
+                      marginTop: '1rem', 
+                      padding: '0.75rem', 
+                      backgroundColor: '#f8fafc', 
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      color: '#374151'
+                    }}>
+                      📅 Last Session: {client.lastSession} • 
+                      📅 Next: {client.nextAppointment}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'intake':
+        // Client view of intake forms
+        return (
+          <div>
+            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+              📋 Complete Your Intake Forms
+            </h2>
+
+            <div style={{
+              backgroundColor: '#dbeafe',
+              border: '1px solid #93c5fd',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              marginBottom: '2rem'
+            }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e40af' }}>Welcome to MindCare Portal</h3>
+              <p style={{ margin: 0, color: '#1e40af', fontSize: '0.875rem' }}>
+                Please complete the required forms below before your first appointment. All information is encrypted and HIPAA-compliant.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {intakeFormTemplates.filter(form => form.required).map(form => (
+                <div key={form.id} style={{
+                  backgroundColor: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.5rem 0', color: '#1e293b' }}>
+                        {form.name}
+                        <span style={{ color: '#dc2626', marginLeft: '0.25rem' }}>*</span>
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#64748b' }}>
+                        {form.description}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => alert(`Opening ${form.name} form...`)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      Complete Form
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Optional Assessments</h3>
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {intakeFormTemplates.filter(form => !form.required).slice(0, 4).map(form => (
+                  <div key={form.id} style={{
+                    backgroundColor: 'white',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    opacity: 0.8
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h5 style={{ margin: '0 0 0.25rem 0', color: '#374151', fontSize: '0.875rem' }}>
+                          {form.name}
+                        </h5>
+                        <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
+                          {form.description}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => alert(`Opening ${form.name} assessment...`)}
+                        style={{
+                          padding: '0.375rem 0.75rem',
+                          backgroundColor: '#f8fafc',
+                          color: '#374151',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Optional
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'integrations':
+        return (
+          <div>
+            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+              🔗 Google Workspace Integration
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+              {/* Gmail Integration */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: '#1e293b' }}>📧 Gmail Integration</h3>
+                  {gmailConnected ? (
+                    <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Check size={20} />
+                      <span>Connected</span>
+                    </div>
+                  ) : (
+                    <button onClick={connectGmail} style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}>
+                      Connect Gmail
+                    </button>
+                  )}
+                </div>
+                
+                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
+                  Secure, HIPAA-compliant client communication
+                </div>
+                
+                <ul style={{ fontSize: '0.875rem', color: '#374151', paddingLeft: '1rem' }}>
+                  <li>End-to-end encrypted messaging</li>
+                  <li>Automated appointment reminders</li>
+                  <li>Secure file attachments</li>
+                  <li>HIPAA audit logging</li>
+                  <li>Client portal integration</li>
+                </ul>
+
+                {gmailConnected && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', color: '#166534' }}>
+                      ✅ Gmail API Connected<br />
+                      📧 {emails.length} messages synced<br />
+                      🔒 BAA status: Active
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Google Calendar Integration */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, color: '#1e293b' }}>📅 Google Calendar</h3>
+                  {calendarConnected ? (
+                    <div style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Check size={20} />
+                      <span>Connected</span>
+                    </div>
+                  ) : (
+                    <button onClick={connectGoogleCalendar} style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}>
+                      Connect Calendar
+                    </button>
+                  )}
+                </div>
+                
+                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1rem' }}>
+                  Automated scheduling and appointment management
+                </div>
+                
+                <ul style={{ fontSize: '0.875rem', color: '#374151', paddingLeft: '1rem' }}>
+                  <li>Client self-scheduling links</li>
+                  <li>Google Meet telehealth integration</li>
+                  <li>Automated reminders (24h/1h)</li>
+                  <li>Waiting list management</li>
+                  <li>Recurring appointment setup</li>
+                </ul>
+
+                {calendarConnected && (
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', color: '#166534' }}>
+                      ✅ Calendar API Connected<br />
+                      📅 {appointments.length} appointments synced<br />
+                      🎥 Google Meet enabled
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* HIPAA Compliance Status */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>🔒 HIPAA Compliance</h3>
+                
+                <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#166534' }}>Google Workspace BAA</span>
+                    <Check size={16} style={{ color: '#166534' }} />
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#166534' }}>End-to-end Encryption</span>
+                    <Check size={16} style={{ color: '#166534' }} />
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#166534' }}>Audit Logging Active</span>
+                    <Check size={16} style={{ color: '#166534' }} />
+                  </div>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#166534' }}>Data at Rest Encrypted</span>
+                    <Check size={16} style={{ color: '#166534' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Setup Instructions */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '2rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0'
+              }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>📋 Setup Checklist</h3>
+                
+                <div style={{ fontSize: '0.875rem', color: '#374151' }}>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong>1. Google Workspace Business</strong><br />
+                    Upgrade to Business plan for HIPAA compliance
+                  </div>
+                  
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong>2. Business Associate Agreement</strong><br />
+                    Sign BAA with Google for healthcare data
+                  </div>
+                  
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong>3. API Configuration</strong><br />
+                    Set up OAuth2 credentials and API keys
+                  </div>
+                  
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <strong>4. Security Settings</strong><br />
+                    Enable 2FA and advanced security features
+                  </div>
+                  
+                  <div>
+                    <strong>5. Staff Training</strong><br />
+                    Train team on HIPAA-compliant email/calendar use
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return <div>Select a tab to continue</div>;
+    }
+  };
+
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f8fafc', 
-      fontFamily: 'system-ui, sans-serif'
-    }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'system-ui, sans-serif' }}>
       {/* Header */}
       <header style={{
         background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
@@ -161,14 +1184,14 @@ export default function MindCarePortal() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <span style={{ fontSize: '2rem' }}>🧠</span>
             <div>
-              <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>MindCare Portal</h1>
-              <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.9 }}>Clinical Management System</p>
+              <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold' }}>MindCare EHR Portal</h1>
+              <p style={{ margin: 0, fontSize: '0.875rem', opacity: 0.9 }}>HIPAA-Compliant Electronic Health Records</p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.875rem' }}>
-                {userType === 'clinician' ? '👨‍⚕️' : '🧑‍💼'} {userName}
+                {userType === 'therapist' ? '👨‍⚕️' : '🧑‍💼'} {currentUser.name}
               </div>
             </div>
             <button
@@ -196,1337 +1219,42 @@ export default function MindCarePortal() {
         padding: '0 2rem',
         boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
       }}>
-        <div style={{ display: 'flex', gap: '0' }}>
-          {(userType === 'clinician' ? [
-            { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-            { id: 'clients', label: 'Client Management', icon: '👥' },
-            { id: 'clinical-notes', label: 'Clinical Notes', icon: '📝' },
-            { id: 'ai-notes', label: 'AI Notes', icon: '🤖' },
-            { id: 'asam-assessment', label: 'ASAM Assessment', icon: '🎯' }
-          ] : [
-            { id: 'client-portal', label: 'My Portal', icon: '🏠' },
-            { id: 'my-progress', label: 'My Progress', icon: '📈' }
-          ]).map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: '1.25rem 1.5rem',
-                border: 'none',
-                backgroundColor: 'transparent',
-                borderBottom: activeTab === tab.id ? '3px solid #2563eb' : '3px solid transparent',
-                color: activeTab === tab.id ? '#2563eb' : '#64748b',
-                cursor: 'pointer',
-                fontWeight: activeTab === tab.id ? '600' : '500',
-                fontSize: '0.875rem'
-              }}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
+        <div style={{ display: 'flex', gap: '0', overflowX: 'auto' }}>
+          {navItems.map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '1.25rem 1.5rem',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  borderBottom: activeTab === tab.id ? '3px solid #2563eb' : '3px solid transparent',
+                  color: activeTab === tab.id ? '#2563eb' : '#64748b',
+                  cursor: 'pointer',
+                  fontWeight: activeTab === tab.id ? '600' : '500',
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <Icon size={18} />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
       {/* Main Content */}
       <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-        
-        {/* Clinician Dashboard */}
-        {userType === 'clinician' && activeTab === 'dashboard' && (
-          <div>
-            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-              Clinical Dashboard
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-              
-              <div style={{
-                backgroundColor: 'white',
-                padding: '2rem',
-                borderRadius: '16px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                border: '1px solid #e2e8f0'
-              }}>
-                <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>📊 Patient Overview</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#dbeafe', borderRadius: '12px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1e40af' }}>{clients.length}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#1e40af' }}>Active Clients</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '12px' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#166534' }}>{clinicalNotes.length}</div>
-                    <div style={{ fontSize: '0.875rem', color: '#166534' }}>Clinical Notes</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: 'white',
-                padding: '2rem',
-                borderRadius: '16px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                border: '1px solid #e2e8f0'
-              }}>
-                <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>⚡ Quick Actions</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <button
-                    onClick={() => setActiveTab('clinical-notes')}
-                    style={{
-                      padding: '0.875rem 1rem',
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    Add DAP Note
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('ai-notes')}
-                    style={{
-                      padding: '0.875rem 1rem',
-                      backgroundColor: '#7c3aed',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    AI Notes
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('asam-assessment')}
-                    style={{
-                      padding: '0.875rem 1rem',
-                      backgroundColor: '#059669',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    ASAM Assessment
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* Client Management */}
-        {userType === 'clinician' && activeTab === 'clients' && (
-          <div>
-            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-              Client Management
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-              {clients.map(client => (
-                <div key={client.id} style={{
-                  backgroundColor: 'white',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e2e8f0',
-                  cursor: 'pointer'
-                }}
-                onClick={() => setSelectedClient(client)}
-                >
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.5rem' }}>
-                    {client.firstName} {client.lastName}
-                  </h3>
-                  <p style={{ margin: '0 0 1rem 0', color: '#64748b', fontSize: '0.875rem' }}>
-                    DOB: {new Date(client.dateOfBirth).toLocaleDateString()}
-                  </p>
-                  
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <div style={{ marginBottom: '0.75rem' }}>
-                      <strong style={{ color: '#374151', fontSize: '0.875rem' }}>Primary Diagnosis:</strong>
-                      <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b', fontSize: '0.875rem' }}>
-                        {client.primaryDiagnosis}
-                      </p>
-                    </div>
-                    <div>
-                      <strong style={{ color: '#374151', fontSize: '0.875rem' }}>Treatment Plan:</strong>
-                      <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b', fontSize: '0.875rem' }}>
-                        {client.treatmentPlan}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedClient(client);
-                        setActiveTab('clinical-notes');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#f8fafc',
-                        color: '#2563eb',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      📝 Add Note
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedClient(client);
-                        setActiveTab('ai-notes');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#f8fafc',
-                        color: '#7c3aed',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      🤖 AI Note
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedClient(client);
-                        setActiveTab('asam-assessment');
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#f8fafc',
-                        color: '#059669',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      🎯 ASAM
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Clinical Notes */}
-        {userType === 'clinician' && activeTab === 'clinical-notes' && (
-          <div>
-            <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-              DAP Clinical Notes
-            </h2>
-
-            {activeNote ? (
-              <DAPNoteForm 
-                client={selectedClient}
-                onSave={(noteData) => {
-                  if (selectedClient) {
-                    createClinicalNote(selectedClient.id, noteData);
-                  }
-                  setActiveNote(null);
-                  alert('✅ DAP note saved successfully');
-                }}
-                onCancel={() => setActiveNote(null)}
-              />
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
-                <div style={{
-                  backgroundColor: 'white',
-                  padding: '1.5rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e2e8f0',
-                  height: 'fit-content'
-                }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>Select Client</h3>
-                  {clients.map(client => (
-                    <div
-                      key={client.id}
-                      onClick={() => setSelectedClient(client)}
-                      style={{
-                        padding: '1rem',
-                        marginBottom: '0.5rem',
-                        backgroundColor: selectedClient?.id === client.id ? '#dbeafe' : '#f8fafc',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        border: selectedClient?.id === client.id ? '2px solid #2563eb' : '1px solid #e2e8f0'
-                      }}
-                    >
-                      <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '0.25rem' }}>
-                        {client.firstName} {client.lastName}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{
-                  backgroundColor: 'white',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  {selectedClient ? (
-                    <>
-                      <h3 style={{ margin: '0 0 1.5rem 0', color: '#1e293b' }}>
-                        DAP Notes - {selectedClient.firstName} {selectedClient.lastName}
-                      </h3>
-                      
-                      <button
-                        onClick={() => setActiveNote({ type: 'new', clientId: selectedClient.id })}
-                        style={{
-                          padding: '0.75rem 1.5rem',
-                          backgroundColor: '#2563eb',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          marginBottom: '1.5rem'
-                        }}
-                      >
-                        + Add New DAP Note
-                      </button>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {clinicalNotes
-                          .filter(note => note.clientId === selectedClient.id)
-                          .map(note => (
-                            <div key={note.id} style={{
-                              padding: '1.5rem',
-                              backgroundColor: '#f8fafc',
-                              borderRadius: '12px',
-                              border: '1px solid #e2e8f0'
-                            }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                                <div style={{ fontWeight: '600', color: '#1e293b' }}>
-                                  {note.sessionType || 'Clinical Session'}
-                                  {note.isAIGenerated && <span style={{ color: '#7c3aed', marginLeft: '0.5rem' }}>🤖 AI</span>}
-                                </div>
-                                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                                  {new Date(note.date).toLocaleDateString()}
-                                </div>
-                              </div>
-                              <div style={{ fontSize: '0.875rem', color: '#374151' }}>
-                                {note.dataObservations || note.content || 'No content recorded'}
-                              </div>
-                            </div>
-                          ))}
-                        
-                        {clinicalNotes.filter(note => note.clientId === selectedClient.id).length === 0 && (
-                          <div style={{ 
-                            textAlign: 'center', 
-                            padding: '3rem', 
-                            color: '#94a3b8'
-                          }}>
-                            No DAP notes recorded yet. Click "Add New DAP Note" to get started.
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      padding: '3rem', 
-                      color: '#94a3b8'
-                    }}>
-                      Select a client to view their DAP notes
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* AI Notes */}
-        {userType === 'clinician' && activeTab === 'ai-notes' && (
-          <AINotesComponent 
-            clients={clients}
-            selectedClient={selectedClient}
-            onNoteSaved={(clientId, noteData) => {
-              createClinicalNote(clientId, noteData);
-              alert('✅ AI-generated note automatically saved to client chart');
-            }}
-          />
-        )}
-
-        {/* ASAM Assessment */}
-        {userType === 'clinician' && activeTab === 'asam-assessment' && (
-          <ASAMAssessment 
-            client={selectedClient}
-            onSave={(assessmentData) => {
-              alert('✅ ASAM Assessment saved successfully');
-            }}
-          />
-        )}
-
-        {/* Client Portal */}
-        {userType === 'client' && activeTab === 'client-portal' && (
-          <ClientPortal clientData={clients[0]} userName={userName} />
-        )}
-
+        {renderContent()}
       </main>
     </div>
   );
-}
+};
 
-// DAP Note Form Component
-function DAPNoteForm({ client, onSave, onCancel }) {
-  const [formData, setFormData] = useState({
-    sessionType: '',
-    dataObservations: '',
-    assessment: '',
-    plan: '',
-    riskAssessment: '',
-    sessionDuration: ''
-  });
-
-  return (
-    <div style={{
-      backgroundColor: 'white',
-      padding: '2rem',
-      borderRadius: '16px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e2e8f0'
-    }}>
-      <h3 style={{ margin: '0 0 2rem 0', color: '#1e293b', fontSize: '1.5rem', fontWeight: '600' }}>
-        DAP Clinical Note - {client ? `${client.firstName} ${client.lastName}` : 'New Client'}
-      </h3>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '600' }}>
-            Session Type
-          </label>
-          <select
-            value={formData.sessionType}
-            onChange={(e) => setFormData({...formData, sessionType: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem'
-            }}
-          >
-            <option value="">Select session type</option>
-            <option value="Individual Therapy">Individual Therapy</option>
-            <option value="Group Therapy">Group Therapy</option>
-            <option value="Family Therapy">Family Therapy</option>
-            <option value="Assessment">Assessment</option>
-            <option value="Crisis Intervention">Crisis Intervention</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#374151', fontWeight: '600' }}>
-            Session Duration
-          </label>
-          <select
-            value={formData.sessionDuration}
-            onChange={(e) => setFormData({...formData, sessionDuration: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem'
-            }}
-          >
-            <option value="">Select duration</option>
-            <option value="30 minutes">30 minutes</option>
-            <option value="45 minutes">45 minutes</option>
-            <option value="60 minutes">60 minutes</option>
-            <option value="90 minutes">90 minutes</option>
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem', marginBottom: '2rem' }}>
-        
-        {/* DATA Section */}
-        <div style={{
-          padding: '1.5rem',
-          backgroundColor: '#f0f9ff',
-          borderRadius: '12px',
-          border: '1px solid #dbeafe'
-        }}>
-          <h4 style={{ margin: '0 0 1rem 0', color: '#1e40af', fontSize: '1.125rem', fontWeight: '600' }}>
-            📊 DATA (Observations & Information)
-          </h4>
-          <textarea
-            value={formData.dataObservations}
-            onChange={(e) => setFormData({...formData, dataObservations: e.target.value})}
-            placeholder="Record observable data: client appearance, mood, affect, speech, thought process, behavior, response to interventions..."
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem',
-              resize: 'vertical',
-              fontFamily: 'inherit'
-            }}
-          />
-        </div>
-
-        {/* ASSESSMENT Section */}
-        <div style={{
-          padding: '1.5rem',
-          backgroundColor: '#f0fdf4',
-          borderRadius: '12px',
-          border: '1px solid #dcfce7'
-        }}>
-          <h4 style={{ margin: '0 0 1rem 0', color: '#166534', fontSize: '1.125rem', fontWeight: '600' }}>
-            🎯 ASSESSMENT (Clinical Interpretation)
-          </h4>
-          <textarea
-            value={formData.assessment}
-            onChange={(e) => setFormData({...formData, assessment: e.target.value})}
-            placeholder="Clinical assessment: interpretation of data, progress toward treatment goals, effectiveness of interventions..."
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem',
-              resize: 'vertical',
-              fontFamily: 'inherit'
-            }}
-          />
-        </div>
-
-        {/* PLAN Section */}
-        <div style={{
-          padding: '1.5rem',
-          backgroundColor: '#fffbeb',
-          borderRadius: '12px',
-          border: '1px solid #fed7aa'
-        }}>
-          <h4 style={{ margin: '0 0 1rem 0', color: '#92400e', fontSize: '1.125rem', fontWeight: '600' }}>
-            📋 PLAN (Next Steps & Interventions)
-          </h4>
-          <textarea
-            value={formData.plan}
-            onChange={(e) => setFormData({...formData, plan: e.target.value})}
-            placeholder="Treatment plan: next session goals, interventions to continue/modify, homework assignments..."
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem',
-              resize: 'vertical',
-              fontFamily: 'inherit'
-            }}
-          />
-        </div>
-
-      </div>
-
-      {/* Risk Assessment */}
-      <div style={{
-        padding: '1.5rem',
-        backgroundColor: '#fef2f2',
-        borderRadius: '12px',
-        border: '1px solid #fecaca',
-        marginBottom: '2rem'
-      }}>
-        <h4 style={{ margin: '0 0 1rem 0', color: '#dc2626', fontSize: '1.125rem', fontWeight: '600' }}>
-          ⚠️ Risk Assessment
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-          {['Low Risk', 'Medium Risk', 'High Risk', 'Imminent Risk'].map(level => (
-            <label key={level} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              cursor: 'pointer',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              backgroundColor: formData.riskAssessment === level ? '#fecaca' : 'white',
-              border: '1px solid #fecaca'
-            }}>
-              <input
-                type="radio"
-                name="riskAssessment"
-                value={level}
-                checked={formData.riskAssessment === level}
-                onChange={(e) => setFormData({...formData, riskAssessment: e.target.value})}
-              />
-              <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>{level}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-        <button
-          onClick={onCancel}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#f8fafc',
-            color: '#64748b',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: '600'
-          }}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => onSave(formData)}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.875rem',
-            fontWeight: '600'
-          }}
-        >
-          Save DAP Note
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// AI Notes Component with auto-injection
-function AINotesComponent({ clients, selectedClient, onNoteSaved }) {
-  const [sessionInput, setSessionInput] = useState('');
-  const [generatedNotes, setGeneratedNotes] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState(selectedClient?.id || '');
-  const [selectedService, setSelectedService] = useState('');
-  const [noteFormat, setNoteFormat] = useState('DAP');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-
-  const services = [
-    { code: '90834', name: '45-min Individual Therapy' },
-    { code: '90837', name: '60-min Individual Therapy' },
-    { code: '90853', name: 'Group Therapy' }
-  ];
-
-  // Recording simulation
-  const handleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setRecordingTime(0);
-      
-      const clinicalContent = `Session Date: ${new Date().toLocaleDateString()}
-Duration: ${Math.floor(recordingTime / 60)}:${(recordingTime % 60).toString().padStart(2, '0')}
-
-CLIENT PRESENTATION:
-Client arrived on time and appeared well-groomed. Maintained good eye contact throughout the session. Speech was clear and coherent. Mood appeared stable with some underlying anxiety noted.
-
-SESSION OBSERVATIONS:
-- Client reported practicing breathing exercises from last session
-- Expressed feeling "more in control" of anxiety symptoms
-- Demonstrated good understanding of cognitive restructuring techniques
-- No safety concerns identified during session
-
-INTERVENTIONS USED:
-- Cognitive Behavioral Therapy techniques focusing on anxiety management
-- Reviewed homework assignment completion
-- Practiced progressive muscle relaxation in session
-- Discussed upcoming week's goals and challenges
-
-CLIENT RESPONSE:
-Client was engaged and participatory. Responded positively to interventions. Expressed willingness to continue practicing techniques. Showed improved confidence in managing symptoms.
-
-RISK ASSESSMENT:
-Low risk for self-harm or harm to others. Client denied suicidal ideation. Support system remains strong with family involvement.
-
-TREATMENT PLAN:
-Continue weekly sessions. Assign daily anxiety tracking worksheet. Practice relaxation techniques twice daily. Next appointment: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}`;
-
-      setSessionInput(clinicalContent);
-      alert('Recording complete! Session transcribed successfully.');
-      
-    } else {
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      const timer = setInterval(() => {
-        setRecordingTime(prev => {
-          if (prev >= 300) {
-            setIsRecording(false);
-            clearInterval(timer);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-      
-      alert('Recording started! Speak your session notes. Click stop when finished.');
-    }
-  };
-
-  // Generate clinical notes with auto-injection
-  const generateAndInjectNotes = () => {
-    if (!sessionInput || !selectedClientId || !selectedService) {
-      alert('Please select client, service, and provide session notes');
-      return;
-    }
-
-    const client = clients.find(c => c.id.toString() === selectedClientId);
-    const service = services.find(s => s.code === selectedService);
-    
-    let noteTemplate = '';
-    
-    if (noteFormat === 'DAP') {
-      noteTemplate = `CLINICAL DOCUMENTATION - DAP FORMAT
-====================================================
-
-CLIENT INFORMATION:
-Name: ${client.firstName} ${client.lastName}
-Service: ${service.code} - ${service.name}
-Date: ${new Date().toLocaleDateString()}
-Clinician: Dr. Rebecca B. Headley, LPC
-
-DATA (Objective Observations):
-• Client presented punctually for scheduled appointment
-• Appeared well-groomed and appropriately dressed
-• Maintained good eye contact throughout session
-• Speech clear and coherent, thought process organized
-• Mood appeared stable, cooperative throughout session
-• No signs of acute distress observed
-
-ASSESSMENT (Clinical Analysis):
-• Client demonstrates progress in treatment goals
-• Shows improved coping strategies and insight
-• Risk assessment indicates low risk for self-harm
-• Treatment engagement remains strong
-• Symptoms showing gradual improvement
-
-PLAN (Treatment & Next Steps):
-• Continue weekly individual therapy sessions
-• Maintain current treatment approach with CBT techniques
-• Assign homework: practice relaxation exercises daily
-• Next appointment: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}
-• Monitor progress and adjust treatment as needed`;
-
-    } else if (noteFormat === 'SOAP') {
-      noteTemplate = `CLINICAL DOCUMENTATION - SOAP FORMAT
-====================================================
-
-CLIENT: ${client.firstName} ${client.lastName}
-SERVICE: ${service.code} - ${service.name}
-DATE: ${new Date().toLocaleDateString()}
-
-SUBJECTIVE:
-Client reports feeling "better than last week" with improved mood and reduced anxiety. States practicing homework assignments consistently. Sleep patterns have improved. Continues medication as prescribed.
-
-OBJECTIVE:
-Client arrived on time, well-groomed. Good eye contact, organized speech. Affect appeared brighter than previous session. No psychomotor agitation observed. Cooperative throughout session.
-
-ASSESSMENT:
-Continued progress toward treatment goals. Symptoms responding well to current interventions. Risk assessment remains low. Good treatment engagement and medication compliance noted.
-
-PLAN:
-• Continue weekly therapy sessions
-• Maintain current homework assignments
-• Monitor symptom progression
-• Follow-up appointment scheduled`;
-
-    } else { // BIRP
-      noteTemplate = `CLINICAL DOCUMENTATION - BIRP FORMAT
-====================================================
-
-CLIENT: ${client.firstName} ${client.lastName}
-SERVICE: ${service.code} - ${service.name}
-DATE: ${new Date().toLocaleDateString()}
-
-BEHAVIOR:
-Client appeared cooperative and engaged. Maintained eye contact, organized thought processes. Participated actively in session discussions. No concerning behaviors observed.
-
-INTERVENTION:
-Conducted individual therapy session using CBT techniques. Reviewed progress on homework assignments. Practiced stress management techniques. Discussed coping strategies for upcoming challenges.
-
-RESPONSE:
-Client responded positively to interventions. Demonstrated good understanding of concepts. Expressed willingness to continue practicing techniques. Showed improved confidence in managing symptoms.
-
-PLAN:
-• Continue weekly therapy sessions
-• Practice assigned homework daily
-• Next appointment: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}
-• Monitor continued progress`;
-    }
-
-    const finalNotes = noteTemplate + `
-
-SESSION NOTES:
-${sessionInput}
-
-Provider: Dr. Rebecca B. Headley, LPC
-License: CO123456
-Date: ${new Date().toLocaleDateString()}`;
-
-    setGeneratedNotes(finalNotes);
-
-    // Auto-inject into client chart
-    const noteData = {
-      sessionType: service.name,
-      dataObservations: sessionInput,
-      assessment: 'AI-generated clinical assessment based on session content',
-      plan: 'AI-generated treatment plan recommendations',
-      riskAssessment: 'Low Risk',
-      sessionDuration: service.name.includes('45') ? '45 minutes' : '60 minutes',
-      content: finalNotes,
-      isAIGenerated: true
-    };
-
-    onNoteSaved(parseInt(selectedClientId), noteData);
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div>
-      <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-        🤖 AI Clinical Notes
-      </h2>
-      
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        marginBottom: '24px',
-        textAlign: 'center'
-      }}>
-        <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
-          AI Clinical Documentation System
-        </h3>
-        <p style={{ margin: '8px 0 0 0', opacity: 0.9, fontSize: '16px' }}>
-          Record sessions • Generate documentation • Auto-inject to client charts
-        </p>
-      </div>
-
-      {/* Session Setup */}
-      <div style={{
-        background: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        marginBottom: '24px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h3 style={{ 
-          marginBottom: '20px', 
-          fontSize: '18px',
-          color: '#374151'
-        }}>
-          📋 Session Information
-        </h3>
-        
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '16px' 
-        }}>
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px', 
-              fontWeight: '600',
-              color: '#374151'
-            }}>
-              Client:
-            </label>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                background: 'white'
-              }}
-            >
-              <option value="">Select Client</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.firstName} {client.lastName}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px', 
-              fontWeight: '600',
-              color: '#374151'
-            }}>
-              Service:
-            </label>
-            <select
-              value={selectedService}
-              onChange={(e) => setSelectedService(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                background: 'white'
-              }}
-            >
-              <option value="">Select Service</option>
-              {services.map(service => (
-                <option key={service.code} value={service.code}>
-                  {service.code} - {service.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label style={{ 
-              display: 'block', 
-              marginBottom: '6px', 
-              fontWeight: '600',
-              color: '#374151'
-            }}>
-              Note Format:
-            </label>
-            <select
-              value={noteFormat}
-              onChange={(e) => setNoteFormat(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '2px solid #d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                background: 'white'
-              }}
-            >
-              <option value="DAP">DAP Notes</option>
-              <option value="SOAP">SOAP Notes</option>
-              <option value="BIRP">BIRP Notes</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Recording Section */}
-      <div style={{
-        background: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        marginBottom: '24px',
-        border: isRecording ? '3px solid #ef4444' : '1px solid #e5e7eb'
-      }}>
-        <h3 style={{ 
-          marginBottom: '20px', 
-          fontSize: '18px',
-          color: '#374151'
-        }}>
-          🎙️ Session Recording
-        </h3>
-        
-        {isRecording && (
-          <div style={{
-            background: '#fef2f2',
-            border: '2px solid #fecaca',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '20px',
-            textAlign: 'center'
-          }}>
-            <div style={{ 
-              fontSize: '24px', 
-              fontWeight: 'bold', 
-              color: '#dc2626',
-              marginBottom: '8px'
-            }}>
-              🔴 RECORDING: {formatTime(recordingTime)}
-            </div>
-            <div style={{ fontSize: '14px', color: '#7f1d1d' }}>
-              Session recording in progress...
-            </div>
-          </div>
-        )}
-        
-        <button
-          onClick={handleRecording}
-          style={{
-            width: '100%',
-            padding: '16px',
-            background: isRecording ? '#dc2626' : '#16a34a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer'
-          }}
-        >
-          {isRecording ? '⏹️ Stop Recording' : '🎙️ Start Session Recording'}
-        </button>
-      </div>
-
-      {/* Session Input */}
-      <div style={{
-        background: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        marginBottom: '24px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <h3 style={{ 
-          marginBottom: '20px', 
-          fontSize: '18px',
-          color: '#374151'
-        }}>
-          📝 Session Notes
-        </h3>
-        
-        <textarea
-          value={sessionInput}
-          onChange={(e) => setSessionInput(e.target.value)}
-          placeholder="Enter session observations, client responses, interventions used, and treatment planning notes..."
-          style={{
-            width: '100%',
-            height: '160px',
-            padding: '16px',
-            border: '2px solid #d1d5db',
-            borderRadius: '8px',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            resize: 'vertical',
-            boxSizing: 'border-box',
-            fontFamily: 'system-ui, -apple-system, sans-serif'
-          }}
-        />
-        
-        <button
-          onClick={generateAndInjectNotes}
-          disabled={!sessionInput || !selectedClientId || !selectedService}
-          style={{
-            width: '100%',
-            padding: '16px',
-            background: (!sessionInput || !selectedClientId || !selectedService) ? '#9ca3af' : '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: (!sessionInput || !selectedClientId || !selectedService) ? 'not-allowed' : 'pointer',
-            marginTop: '16px'
-          }}
-        >
-          🤖 Generate {noteFormat} Notes & Auto-Inject to Chart
-        </button>
-      </div>
-
-      {/* Generated Notes Preview */}
-      {generatedNotes && (
-        <div style={{
-          background: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-          marginBottom: '24px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h3 style={{ 
-            margin: '0 0 20px 0', 
-            fontSize: '18px',
-            color: '#374151'
-          }}>
-            📄 Generated Notes Preview (Auto-Injected to Client Chart)
-          </h3>
-          
-          <div style={{
-            background: '#f0fdf4',
-            border: '2px solid #bbf7d0',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '20px',
-            fontSize: '14px',
-            color: '#15803d'
-          }}>
-            ✅ <strong>Successfully Added to Client Chart</strong>
-            <br />📋 This note has been automatically saved to the selected client's clinical records.
-          </div>
-          
-          <div style={{
-            background: '#f8fafc',
-            padding: '20px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            lineHeight: '1.6',
-            overflow: 'auto',
-            whiteSpace: 'pre-wrap',
-            fontFamily: 'Monaco, Consolas, monospace',
-            border: '1px solid #e2e8f0',
-            maxHeight: '400px'
-          }}>
-            {generatedNotes}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ASAM Assessment Component  
-function ASAMAssessment({ client, onSave }) {
-  const [assessment, setAssessment] = useState({
-    dimension1: '',
-    dimension2: '',
-    dimension3: '',
-    dimension4: '',
-    dimension5: '',
-    dimension6: '',
-    recommendedLevel: ''
-  });
-
-  const dimensions = [
-    {
-      key: 'dimension1',
-      title: 'Dimension 1: Acute Intoxication and/or Withdrawal Potential',
-      options: ['None', 'Mild', 'Moderate', 'Severe']
-    },
-    {
-      key: 'dimension2', 
-      title: 'Dimension 2: Biomedical Conditions and Complications',
-      options: ['None', 'Mild', 'Moderate', 'Severe']
-    },
-    {
-      key: 'dimension3',
-      title: 'Dimension 3: Emotional, Behavioral, or Cognitive Conditions',
-      options: ['None', 'Mild', 'Moderate', 'Severe']
-    },
-    {
-      key: 'dimension4',
-      title: 'Dimension 4: Readiness to Change',
-      options: ['High', 'Moderate', 'Low', 'Very Low']
-    },
-    {
-      key: 'dimension5',
-      title: 'Dimension 5: Relapse, Continued Use, or Continued Problem Potential',
-      options: ['Low', 'Moderate', 'High', 'Very High']
-    },
-    {
-      key: 'dimension6',
-      title: 'Dimension 6: Recovery Environment',
-      options: ['Very Supportive', 'Supportive', 'Neutral', 'Unsupportive', 'Very Unsupportive']
-    }
-  ];
-
-  const levels = [
-    'Level 0.5 - Early Intervention',
-    'Level 1 - Outpatient Services',
-    'Level 2.1 - Intensive Outpatient',
-    'Level 2.5 - Partial Hospitalization',
-    'Level 3.1 - Clinically Managed Low-Intensity Residential',
-    'Level 3.3 - Clinically Managed Population-Specific High-Intensity Residential',
-    'Level 3.5 - Clinically Managed High-Intensity Residential',
-    'Level 3.7 - Medically Monitored Intensive Inpatient',
-    'Level 4 - Medically Managed Intensive Inpatient'
-  ];
-
-  return (
-    <div style={{
-      backgroundColor: 'white',
-      padding: '2rem',
-      borderRadius: '16px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-      border: '1px solid #e2e8f0'
-    }}>
-      <h2 style={{ margin: '0 0 2rem 0', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-        ASAM Assessment
-      </h2>
-      
-      {client && (
-        <div style={{ 
-          marginBottom: '2rem', 
-          padding: '1.5rem', 
-          backgroundColor: '#f8fafc', 
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>
-            Client: {client.firstName} {client.lastName}
-          </h3>
-          <p style={{ margin: 0, color: '#64748b' }}>
-            Current Level: {client.currentLevel}
-          </p>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        {dimensions.map(dimension => (
-          <div key={dimension.key} style={{
-            padding: '1.5rem',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px'
-          }}>
-            <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.125rem' }}>
-              {dimension.title}
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.5rem' }}>
-              {dimension.options.map(option => (
-                <label key={option} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: 'pointer',
-                  padding: '0.5rem',
-                  borderRadius: '6px',
-                  backgroundColor: assessment[dimension.key] === option ? '#dbeafe' : 'transparent'
-                }}>
-                  <input
-                    type="radio"
-                    name={dimension.key}
-                    value={option}
-                    checked={assessment[dimension.key] === option}
-                    onChange={(e) => setAssessment({...assessment, [dimension.key]: e.target.value})}
-                  />
-                  <span style={{ fontSize: '0.875rem' }}>{option}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <div style={{
-          padding: '1.5rem',
-          border: '2px solid #2563eb',
-          borderRadius: '12px',
-          backgroundColor: '#f0f9ff'
-        }}>
-          <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.125rem' }}>
-            Recommended Level of Care
-          </h4>
-          <select
-            value={assessment.recommendedLevel}
-            onChange={(e) => setAssessment({...assessment, recommendedLevel: e.target.value})}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '0.875rem'
-            }}
-          >
-            <option value="">Select recommended level</option>
-            {levels.map(level => (
-              <option key={level} value={level}>{level}</option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-          <button
-            onClick={() => onSave(assessment)}
-            style={{
-              padding: '0.75rem 2rem',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '600'
-            }}
-          >
-            Save ASAM Assessment
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Client Portal Component
-function ClientPortal({ clientData, userName }) {
-  return (
-    <div>
-      <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
-        Welcome, {userName}
-      </h2>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
-        
-        <div style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>📋 Treatment Summary</h3>
-          <div>
-            <strong style={{ color: '#374151' }}>Current Level:</strong>
-            <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b' }}>{clientData.currentLevel}</p>
-          </div>
-          <div style={{ marginTop: '1rem' }}>
-            <strong style={{ color: '#374151' }}>Treatment Plan:</strong>
-            <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b' }}>{clientData.treatmentPlan}</p>
-          </div>
-        </div>
-
-        <div style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '16px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#1e293b' }}>📈 Progress Tracking</h3>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              fontSize: '3rem', 
-              fontWeight: 'bold', 
-              color: '#059669',
-              marginBottom: '0.5rem'
-            }}>
-              75%
-            </div>
-            <p style={{ margin: 0, color: '#64748b' }}>Treatment Progress</p>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
+export default MindCareEHRPortal;
