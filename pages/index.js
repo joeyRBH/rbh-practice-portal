@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react';
 
 export default function MindCarePortal() {
+  const [mounted, setMounted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userType, setUserType] = useState('');
   const [userName, setUserName] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedClient, setSelectedClient] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [gmailConnected, setGmailConnected] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+
+  // Ensure component only renders on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   // Real Google API credentials
   const GOOGLE_CLIENT_ID = '940233544658-rbhdvbt2l825ae83bagpiqn83c79e65c.apps.googleusercontent.com';
-  const GOOGLE_API_KEY = 'AIzaSyAkbtz3wkgC1IbWwvfsuf2hYG54GrX0jXk';
   const REDIRECT_URI = 'https://rbh-practice-portal.vercel.app';
 
   // Sample client data
@@ -25,9 +32,6 @@ export default function MindCarePortal() {
       email: 'sarah.j@email.com',
       phone: '(555) 123-4567',
       nextAppointment: '2025-09-15 10:00 AM',
-      status: 'Active',
-      progress: 75,
-      totalSessions: 8,
       riskLevel: 'Low'
     },
     {
@@ -36,51 +40,9 @@ export default function MindCarePortal() {
       email: 'mchen@email.com',
       phone: '(555) 987-6543',
       nextAppointment: '2025-09-16 2:00 PM',
-      status: 'Active',
-      progress: 60,
-      totalSessions: 5,
       riskLevel: 'Medium'
     }
   ];
-
-  // Ensure client-side only
-  useEffect(() => {
-    setIsClient(true);
-    
-    // Handle OAuth callback only on client side
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const scope = urlParams.get('scope');
-    
-    if (code) {
-      // Determine which service was connected based on scope
-      if (scope && scope.includes('calendar')) {
-        setGoogleConnected(true);
-        setNotifications(prev => [{
-          id: Date.now(),
-          type: 'calendar',
-          message: 'Google Calendar connected successfully',
-          timestamp: new Date().toLocaleTimeString(),
-          status: 'success'
-        }, ...prev.slice(0, 4)]);
-      }
-      
-      if (scope && scope.includes('gmail')) {
-        setGmailConnected(true);
-        setNotifications(prev => [{
-          id: Date.now(),
-          type: 'email',
-          message: 'Gmail API connected successfully',
-          timestamp: new Date().toLocaleTimeString(),
-          status: 'success'
-        }, ...prev.slice(0, 4)]);
-      }
-      
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      setIsLoading(false);
-    }
-  }, []);
 
   // Login simulation
   const loginWithGoogle = (accountType) => {
@@ -102,15 +64,13 @@ export default function MindCarePortal() {
     setActiveTab('dashboard');
   };
 
-  // Real Google Calendar integration - client side only
+  // Google Calendar integration
   const connectGoogleCalendar = () => {
-    if (!isClient) return;
-    
     setIsLoading(true);
     
     const authUrl = 'https://accounts.google.com/oauth/v2/auth?' +
-      `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      'client_id=' + GOOGLE_CLIENT_ID + '&' +
+      'redirect_uri=' + encodeURIComponent(REDIRECT_URI) + '&' +
       'response_type=code&' +
       'scope=https://www.googleapis.com/auth/calendar&' +
       'access_type=offline&' +
@@ -119,15 +79,13 @@ export default function MindCarePortal() {
     window.location.href = authUrl;
   };
 
-  // Real Gmail API integration - client side only
+  // Gmail API integration
   const connectGmailAPI = () => {
-    if (!isClient) return;
-    
     setIsLoading(true);
     
     const authUrl = 'https://accounts.google.com/oauth/v2/auth?' +
-      `client_id=${GOOGLE_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+      'client_id=' + GOOGLE_CLIENT_ID + '&' +
+      'redirect_uri=' + encodeURIComponent(REDIRECT_URI) + '&' +
       'response_type=code&' +
       'scope=https://www.googleapis.com/auth/gmail.send&' +
       'access_type=offline&' +
@@ -136,49 +94,23 @@ export default function MindCarePortal() {
     window.location.href = authUrl;
   };
 
-  // Gmail integration function
-  const sendAppointmentReminder = async (client) => {
+  // Send reminder function
+  const sendAppointmentReminder = (client) => {
     setIsLoading(true);
     
-    // Simulate Gmail API call
     setTimeout(() => {
       const newNotification = {
         id: Date.now(),
         type: 'email',
-        message: `Appointment reminder sent to ${client.name}`,
+        message: 'Appointment reminder sent to ' + client.name,
         timestamp: new Date().toLocaleTimeString(),
         status: 'success'
       };
       
-      setNotifications(prev => [newNotification, ...prev.slice(0, 4)]);
+      setNotifications([newNotification].concat(notifications.slice(0, 4)));
       setIsLoading(false);
     }, 2000);
   };
-
-  // Don't render until client-side hydration
-  if (!isClient) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        fontFamily: 'Arial, sans-serif'
-      }}>
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
-          padding: '3rem',
-          borderRadius: '20px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          textAlign: 'center'
-        }}>
-          <h1 style={{ color: '#333', marginBottom: '1rem' }}>🧠 MindCare Portal</h1>
-          <p style={{ color: '#666' }}>Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{
@@ -188,7 +120,6 @@ export default function MindCarePortal() {
     }}>
       
       {!isLoggedIn ? (
-        // Login Screen
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -246,8 +177,7 @@ export default function MindCarePortal() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem',
-                    transition: 'transform 0.2s'
+                    gap: '0.5rem'
                   }}
                 >
                   👨‍⚕️ Login as Clinician
@@ -266,8 +196,7 @@ export default function MindCarePortal() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '0.5rem',
-                    transition: 'transform 0.2s'
+                    gap: '0.5rem'
                   }}
                 >
                   👤 Login as Client
@@ -288,9 +217,7 @@ export default function MindCarePortal() {
           </div>
         </div>
       ) : (
-        // Main Dashboard
         <div style={{ padding: '1rem' }}>
-          {/* Header */}
           <div style={{
             background: 'rgba(255, 255, 255, 0.95)',
             padding: '1rem 2rem',
@@ -324,7 +251,6 @@ export default function MindCarePortal() {
             </button>
           </div>
 
-          {/* Navigation */}
           <div style={{
             background: 'rgba(255, 255, 255, 0.95)',
             padding: '1rem',
@@ -344,8 +270,7 @@ export default function MindCarePortal() {
                     padding: '0.75rem 1.5rem',
                     borderRadius: '10px',
                     cursor: 'pointer',
-                    textTransform: 'capitalize',
-                    transition: 'all 0.3s ease'
+                    textTransform: 'capitalize'
                   }}
                 >
                   {tab}
@@ -354,10 +279,8 @@ export default function MindCarePortal() {
             </div>
           </div>
 
-          {/* Content Area */}
           {activeTab === 'dashboard' && (
             <div>
-              {/* Google Integration Panel */}
               <div style={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 padding: '2rem',
@@ -365,7 +288,7 @@ export default function MindCarePortal() {
                 color: 'white',
                 marginBottom: '2rem'
               }}>
-                <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ margin: '0 0 1.5rem 0' }}>
                   🔗 Google Integrations
                 </h3>
                 
@@ -377,12 +300,10 @@ export default function MindCarePortal() {
                       background: googleConnected ? 'rgba(76, 175, 80, 0.3)' : 
                                 isLoading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
                       color: 'white',
-                      border: googleConnected ? '2px solid rgba(76, 175, 80, 0.5)' : '2px solid rgba(255,255,255,0.3)',
+                      border: '2px solid rgba(255,255,255,0.3)',
                       padding: '0.75rem 1.5rem',
                       borderRadius: '10px',
-                      cursor: (isLoading || googleConnected) ? 'not-allowed' : 'pointer',
-                      backdropFilter: 'blur(10px)',
-                      transition: 'all 0.3s ease'
+                      cursor: (isLoading || googleConnected) ? 'not-allowed' : 'pointer'
                     }}
                   >
                     {googleConnected ? 'Google Calendar Connected' : '📅 Connect Google Calendar'}
@@ -395,12 +316,10 @@ export default function MindCarePortal() {
                       background: gmailConnected ? 'rgba(76, 175, 80, 0.3)' : 
                                 isLoading ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.2)',
                       color: 'white',
-                      border: gmailConnected ? '2px solid rgba(76, 175, 80, 0.5)' : '2px solid rgba(255,255,255,0.3)',
+                      border: '2px solid rgba(255,255,255,0.3)',
                       padding: '0.75rem 1.5rem',
                       borderRadius: '10px',
-                      cursor: (isLoading || gmailConnected) ? 'not-allowed' : 'pointer',
-                      backdropFilter: 'blur(10px)',
-                      transition: 'all 0.3s ease'
+                      cursor: (isLoading || gmailConnected) ? 'not-allowed' : 'pointer'
                     }}
                   >
                     {gmailConnected ? 'Gmail API Connected' : '📧 Connect Gmail API'}
@@ -422,7 +341,6 @@ export default function MindCarePortal() {
                 )}
               </div>
 
-              {/* Practice Overview */}
               <div style={{
                 background: 'white',
                 padding: '2rem',
@@ -436,7 +354,7 @@ export default function MindCarePortal() {
                   <div style={{ background: '#f8f9ff', padding: '1.5rem', borderRadius: '10px' }}>
                     <h4 style={{ color: '#667eea', margin: '0 0 0.5rem 0' }}>Total Clients</h4>
                     <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
-                      {clients.length}
+                      2
                     </p>
                   </div>
                   
@@ -456,7 +374,6 @@ export default function MindCarePortal() {
                 </div>
               </div>
 
-              {/* Notifications */}
               {notifications.length > 0 && (
                 <div style={{
                   background: 'white',
@@ -469,7 +386,7 @@ export default function MindCarePortal() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {notifications.map(notification => (
                       <div key={notification.id} style={{
-                        background: notification.type === 'calendar' ? '#e3f2fd' : '#f3e5f5',
+                        background: '#e3f2fd',
                         padding: '1rem',
                         borderRadius: '8px',
                         display: 'flex',
@@ -477,7 +394,7 @@ export default function MindCarePortal() {
                         alignItems: 'center'
                       }}>
                         <span style={{ color: '#333' }}>
-                          {notification.type === 'calendar' ? '📅' : '📧'} {notification.message}
+                          📧 {notification.message}
                         </span>
                         <span style={{ color: '#666', fontSize: '0.9rem' }}>
                           {notification.timestamp}
@@ -497,9 +414,7 @@ export default function MindCarePortal() {
               borderRadius: '15px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h2 style={{ color: '#333', margin: 0 }}>👥 Client Management</h2>
-              </div>
+              <h2 style={{ color: '#333', margin: '0 0 2rem 0' }}>👥 Client Management</h2>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {clients.map(client => (
