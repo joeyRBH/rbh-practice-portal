@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function MindCareEHRPortal() {
   const [currentUser, setCurrentUser] = useState(null)
@@ -8,6 +8,7 @@ export default function MindCareEHRPortal() {
   const [calendarConnected, setCalendarConnected] = useState(false)
   const [emails, setEmails] = useState([])
   const [appointments, setAppointments] = useState([])
+  const [accessToken, setAccessToken] = useState(null)
   
   // AI Notes state
   const [sessionInput, setSessionInput] = useState('')
@@ -47,86 +48,176 @@ export default function MindCareEHRPortal() {
     { code: '90853', name: 'Group Therapy' }
   ]
 
-  // Sample emails
-  const sampleEmails = [
-    {
-      id: 1,
-      from: 'sarah.johnson@email.com',
-      subject: 'Question about homework assignment',
-      snippet: 'Hi Dr. Wilson, I had a question about the CBT worksheet you assigned...',
-      date: '2025-09-11',
-      read: false,
-      labels: ['client-communication']
-    },
-    {
-      id: 2,
-      from: 'appointments@mindcareportal.com',
-      subject: 'Appointment Reminder - Tomorrow 10:00 AM',
-      snippet: 'This is a reminder for your upcoming appointment...',
-      date: '2025-09-11',
-      read: true,
-      labels: ['automated']
+  // Check for OAuth callback on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const authStatus = urlParams.get('auth')
+    const service = urlParams.get('service')
+    
+    if (authStatus === 'success' && service === 'google') {
+      // Handle successful authentication
+      setAccessToken(localStorage.getItem('google_access_token'))
+      if (urlParams.get('scope')?.includes('gmail')) {
+        setGmailConnected(true)
+        loadEmails()
+      }
+      if (urlParams.get('scope')?.includes('calendar')) {
+        setCalendarConnected(true)
+        loadCalendarEvents()
+      }
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
-  ]
+  }, [])
 
-  // Google Services Integration Functions
-  const connectGmail = () => {
-    if (confirm('Connect Gmail for secure client communication?\n\nThis will enable:\n• Secure client messaging\n• Appointment reminders\n• HIPAA-compliant email management\n\nNote: Requires Google Workspace Business with BAA')) {
-      setGmailConnected(true)
-      setEmails(sampleEmails)
-      alert('Gmail connected successfully!\n\nRemember to:\n1. Set up Google Workspace Business\n2. Sign Business Associate Agreement\n3. Configure secure email filters')
+  // Real Google Services Integration Functions
+  const connectGmail = async () => {
+    try {
+      const response = await fetch('/api/gmail/connect', { method: 'POST' })
+      const data = await response.json()
+      
+      if (data.authUrl) {
+        // Open OAuth popup
+        const popup = window.open(data.authUrl, 'google-auth', 'width=500,height=600')
+        
+        // Wait for popup to close
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed)
+            // Refresh page to check auth status
+            window.location.reload()
+          }
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Gmail connection error:', error)
+      alert('Failed to connect Gmail. Please try again.')
     }
   }
 
-  const connectGoogleCalendar = () => {
-    if (confirm('Connect Google Calendar for appointment scheduling?\n\nThis will enable:\n• Automated scheduling\n• Client booking links\n• Reminder notifications\n• HIPAA-compliant calendar management')) {
-      setCalendarConnected(true)
-      setAppointments([
-        {
-          id: 1,
-          clientId: 1,
-          clientName: 'Sarah Johnson',
-          date: '2025-09-12',
-          time: '10:00 AM',
-          service: 'Individual Therapy - 50 min',
-          status: 'Confirmed',
-          meetingLink: 'https://meet.google.com/abc-defg-hij',
-          reminderSent: true
+  const connectGoogleCalendar = async () => {
+    try {
+      const response = await fetch('/api/calendar/connect', { method: 'POST' })
+      const data = await response.json()
+      
+      if (data.authUrl) {
+        const popup = window.open(data.authUrl, 'google-auth', 'width=500,height=600')
+        
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed)
+            window.location.reload()
+          }
+        }, 1000)
+      }
+    } catch (error) {
+      console.error('Calendar connection error:', error)
+      alert('Failed to connect Google Calendar. Please try again.')
+    }
+  }
+
+  const loadEmails = async () => {
+    if (!accessToken) return
+    
+    try {
+      const response = await fetch('/api/gmail/messages', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
         },
-        {
-          id: 2,
-          clientId: 1,
-          clientName: 'Sarah Johnson',
-          date: '2025-09-19',
-          time: '10:00 AM',
-          service: 'Individual Therapy - 50 min',
-          status: 'Scheduled',
-          meetingLink: 'https://meet.google.com/xyz-uvwx-rst',
-          reminderSent: false
-        }
-      ])
-      alert('Google Calendar connected!\n\nFeatures now available:\n• Automated appointment scheduling\n• Client self-booking\n• Email reminders\n• Google Meet integration')
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setEmails(data.messages || [])
+      }
+    } catch (error) {
+      console.error('Failed to load emails:', error)
     }
   }
 
-  const sendEmail = (to, subject, body) => {
-    if (!gmailConnected) {
+  const loadCalendarEvents = async () => {
+    if (!accessToken) return
+    
+    try {
+      const response = await fetch('/api/calendar/events', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAppointments(data.events?.map(event => ({
+          id: event.id,
+          clientName: event.summary,
+          date: new Date(event.start).toLocaleDateString(),
+          time: new Date(event.start).toLocaleTimeString(),
+          service: event.description || 'Appointment',
+          status: event.status === 'confirmed' ? 'Confirmed' : 'Pending',
+          meetingLink: event.hangoutLink
+        })) || [])
+      }
+    } catch (error) {
+      console.error('Failed to load calendar events:', error)
+    }
+  }
+
+  const sendEmail = async (to, subject, body) => {
+    if (!gmailConnected || !accessToken) {
       alert('Please connect Gmail first')
       return
     }
     
-    const newEmail = {
-      id: emails.length + 1,
-      from: 'dr.wilson@mindcareportal.com',
-      to: to,
-      subject: subject,
-      body: body,
-      date: new Date().toISOString().split('T')[0],
-      sent: true,
-      hipaaCompliant: true
+    try {
+      const response = await fetch('/api/gmail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ to, subject, body }),
+      })
+
+      if (response.ok) {
+        alert('Email sent successfully!')
+      } else {
+        throw new Error('Failed to send email')
+      }
+    } catch (error) {
+      console.error('Send email error:', error)
+      alert('Failed to send email. Please try again.')
     }
-    
-    alert('Secure email sent successfully!\n\nEmail features:\n• End-to-end encryption\n• HIPAA compliance logging\n• Automatic archiving')
+  }
+
+  const createAppointment = async (appointmentData) => {
+    if (!calendarConnected || !accessToken) {
+      alert('Please connect Google Calendar first')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(appointmentData),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert('Appointment created successfully!')
+        loadCalendarEvents() // Refresh the list
+        return data.event
+      } else {
+        throw new Error('Failed to create appointment')
+      }
+    } catch (error) {
+      console.error('Create appointment error:', error)
+      alert('Failed to create appointment. Please try again.')
+    }
   }
 
   // Login Functions
@@ -146,9 +237,13 @@ export default function MindCareEHRPortal() {
     setCurrentUser(null)
     setUserType(null)
     setActiveTab('dashboard')
+    setGmailConnected(false)
+    setCalendarConnected(false)
+    setAccessToken(null)
+    localStorage.removeItem('google_access_token')
   }
 
-  // AI Notes Functions
+  // AI Notes Functions (unchanged from previous implementation)
   const handleRecording = () => {
     if (isRecording) {
       setIsRecording(false)
@@ -272,7 +367,7 @@ Date: ${new Date().toLocaleDateString()}`
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Login Screen
+  // Login Screen (unchanged)
   if (!currentUser) {
     return (
       <div style={{ 
@@ -350,9 +445,9 @@ Date: ${new Date().toLocaleDateString()}`
           }}>
             <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>🔗 Google Integration</h4>
             <div style={{ fontSize: '0.875rem', color: '#64748b', textAlign: 'left' }}>
-              <p style={{ margin: '0.25rem 0' }}>✅ Gmail secure messaging</p>
-              <p style={{ margin: '0.25rem 0' }}>✅ Google Calendar scheduling</p>
-              <p style={{ margin: '0.25rem 0' }}>✅ Google Meet telehealth</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ Real Gmail API integration</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ Live Google Calendar sync</p>
+              <p style={{ margin: '0.25rem 0' }}>✅ OAuth2 authentication</p>
               <p style={{ margin: '0.25rem 0' }}>✅ HIPAA-compliant BAA</p>
             </div>
           </div>
@@ -361,7 +456,7 @@ Date: ${new Date().toLocaleDateString()}`
     )
   }
 
-  // Navigation based on user type
+  // Navigation based on user type (unchanged)
   const navItems = userType === 'client' ? [
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { id: 'appointments', label: 'Appointments', icon: '📅' },
@@ -379,7 +474,7 @@ Date: ${new Date().toLocaleDateString()}`
     { id: 'integrations', label: 'Integrations', icon: '⚙️' }
   ]
 
-  // Render main content based on active tab
+  // Render main content (email and calendar sections updated to use real data)
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -471,7 +566,14 @@ Date: ${new Date().toLocaleDateString()}`
               </h2>
               {gmailConnected && (
                 <button
-                  onClick={() => alert('Compose new secure email')}
+                  onClick={() => {
+                    const to = prompt('Send to:')
+                    const subject = prompt('Subject:')
+                    const body = prompt('Message:')
+                    if (to && subject && body) {
+                      sendEmail(to, subject, body)
+                    }
+                  }}
                   style={{
                     padding: '0.75rem 1.5rem',
                     backgroundColor: '#2563eb',
@@ -498,9 +600,9 @@ Date: ${new Date().toLocaleDateString()}`
                 textAlign: 'center'
               }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
-                <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Connect Gmail for Secure Messaging</h3>
+                <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Connect Gmail for Real Email Integration</h3>
                 <p style={{ color: '#64748b', marginBottom: '2rem' }}>
-                  Enable HIPAA-compliant client communication with Gmail integration
+                  Connect your Gmail account to send and receive HIPAA-compliant emails
                 </p>
                 <button onClick={connectGmail} style={{
                   padding: '1rem 2rem',
@@ -523,52 +625,196 @@ Date: ${new Date().toLocaleDateString()}`
                 border: '1px solid #e2e8f0',
                 overflow: 'hidden'
               }}>
-                {emails.map(email => (
-                  <div key={email.id} style={{
-                    padding: '1.5rem',
-                    borderBottom: '1px solid #e2e8f0',
-                    cursor: 'pointer',
-                    backgroundColor: !email.read ? '#f0f9ff' : 'white'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: email.read ? 'normal' : 'bold', color: '#1e293b' }}>
-                          {email.subject}
-                        </h4>
-                        <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', color: '#64748b' }}>
-                          From: {email.from}
-                        </p>
-                      </div>
-                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                        {email.date}
-                      </div>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
-                      {email.snippet}
-                    </p>
-                    {email.labels && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        {email.labels.map(label => (
-                          <span key={label} style={{
-                            backgroundColor: '#dbeafe',
-                            color: '#1e40af',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.75rem',
-                            marginRight: '0.5rem'
-                          }}>
-                            {label}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                {emails.length === 0 ? (
+                  <div style={{ padding: '2rem', textAlign: 'center' }}>
+                    <button onClick={loadEmails} style={{
+                      padding: '1rem 2rem',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}>
+                      Load Recent Emails
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  emails.map(email => (
+                    <div key={email.id} style={{
+                      padding: '1.5rem',
+                      borderBottom: '1px solid #e2e8f0',
+                      cursor: 'pointer',
+                      backgroundColor: !email.read ? '#f0f9ff' : 'white'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: email.read ? 'normal' : 'bold', color: '#1e293b' }}>
+                            {email.subject}
+                          </h4>
+                          <p style={{ margin: '0.25rem 0', fontSize: '0.875rem', color: '#64748b' }}>
+                            From: {email.from}
+                          </p>
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                          {email.date}
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.875rem', color: '#374151' }}>
+                        {email.snippet}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
         )
 
+      case 'calendar':
+        return (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <h2 style={{ margin: 0, color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
+                📅 Calendar Management
+              </h2>
+              {calendarConnected && (
+                <button
+                  onClick={() => {
+                    const summary = prompt('Appointment title:')
+                    const start = prompt('Start time (YYYY-MM-DDTHH:MM:SS):')
+                    const end = prompt('End time (YYYY-MM-DDTHH:MM:SS):')
+                    if (summary && start && end) {
+                      createAppointment({ summary, start, end })
+                    }
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                  }}
+                >
+                  ➕ New Appointment
+                </button>
+              )}
+            </div>
+
+            {!calendarConnected ? (
+              <div style={{
+                backgroundColor: 'white',
+                padding: '3rem',
+                borderRadius: '16px',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                border: '1px solid #e2e8f0',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📅</div>
+                <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Connect Google Calendar</h3>
+                <p style={{ color: '#64748b', marginBottom: '2rem' }}>
+                  Connect your Google Calendar for automated scheduling and appointment management
+                </p>
+                <button onClick={connectGoogleCalendar} style={{
+                  padding: '1rem 2rem',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600'
+                }}>
+                  🔗 Connect Google Calendar
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '2rem' }}>
+                {appointments.length === 0 ? (
+                  <div style={{
+                    backgroundColor: 'white',
+                    padding: '2rem',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                    border: '1px solid #e2e8f0',
+                    textAlign: 'center'
+                  }}>
+                    <button onClick={loadCalendarEvents} style={{
+                      padding: '1rem 2rem',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}>
+                      Load Calendar Events
+                    </button>
+                  </div>
+                ) : (
+                  appointments.map(appointment => (
+                    <div key={appointment.id} style={{
+                      backgroundColor: 'white',
+                      padding: '2rem',
+                      borderRadius: '16px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      border: '1px solid #e2e8f0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                        <div>
+                          <h3 style={{ margin: 0, color: '#1e293b', fontSize: '1.25rem' }}>
+                            {appointment.clientName}
+                          </h3>
+                          <p style={{ margin: '0.5rem 0', color: '#64748b' }}>
+                            {appointment.service}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#374151' }}>
+                            <span>📅 {appointment.date}</span>
+                            <span>🕐 {appointment.time}</span>
+                          </div>
+                        </div>
+                        <span style={{
+                          backgroundColor: appointment.status === 'Confirmed' ? '#dcfce7' : '#fef3c7',
+                          color: appointment.status === 'Confirmed' ? '#166534' : '#92400e',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '20px',
+                          fontSize: '0.875rem',
+                          fontWeight: '600'
+                        }}>
+                          {appointment.status}
+                        </span>
+                      </div>
+                      
+                      {appointment.meetingLink && (
+                        <div style={{ 
+                          backgroundColor: '#f0f9ff', 
+                          padding: '1rem', 
+                          borderRadius: '8px',
+                          marginTop: '1rem'
+                        }}>
+                          <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1e40af' }}>
+                            🎥 Google Meet Link
+                          </p>
+                          <a 
+                            href={appointment.meetingLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: '#2563eb', textDecoration: 'none', fontSize: '0.875rem' }}
+                          >
+                            {appointment.meetingLink}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )
+
+      // AI Notes and other sections remain the same as the previous implementation
       case 'ai-notes':
         return (
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
