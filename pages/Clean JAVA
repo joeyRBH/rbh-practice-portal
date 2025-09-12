@@ -1,164 +1,140 @@
-import { useState } from 'react';
+import { useState } from 'react'
 
 export default function MindCarePortal() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userType, setUserType] = useState('');
-  const [userName, setUserName] = useState('');
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [userType, setUserType] = useState('')
+  const [userName, setUserName] = useState('')
+  const [activeTab, setActiveTab] = useState('dashboard')
   
-  // AI Notes State
-  const [sessionInput, setSessionInput] = useState('');
-  const [generatedNotes, setGeneratedNotes] = useState('');
-  const [selectedClient, setSelectedClient] = useState('');
-  const [selectedService, setSelectedService] = useState('');
-  const [noteFormat, setNoteFormat] = useState('DAP');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isSigned, setIsSigned] = useState(false);
-  const [signedAt, setSignedAt] = useState('');
+  // AI Notes state
+  const [sessionInput, setSessionInput] = useState('')
+  const [generatedNotes, setGeneratedNotes] = useState('')
+  const [selectedClient, setSelectedClient] = useState('')
+  const [selectedService, setSelectedService] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [isSigned, setIsSigned] = useState(false)
 
-  // Sample data
   const clients = [
     { id: 1, name: 'Sarah Johnson' },
     { id: 2, name: 'Michael Chen' },
     { id: 3, name: 'Emma Davis' }
-  ];
-  
+  ]
+
   const services = [
     { code: '90834', name: '45-min Individual Therapy' },
     { code: '90837', name: '60-min Individual Therapy' },
     { code: '90853', name: 'Group Therapy' }
-  ];
+  ]
 
-  const loginWithGoogle = (accountType) => {
-    setUserType(accountType);
-    setUserName(accountType === 'clinician' ? 'Dr. Rebecca Wilson' : 'Sarah Johnson');
-    setIsLoggedIn(true);
-    setActiveTab('dashboard');
-  };
+  const login = (type) => {
+    setUserType(type)
+    setUserName(type === 'clinician' ? 'Dr. Rebecca Wilson' : 'Sarah Johnson')
+    setIsLoggedIn(true)
+  }
 
   const logout = () => {
-    setIsLoggedIn(false);
-    setUserType('');
-    setUserName('');
-    setActiveTab('dashboard');
-  };
+    setIsLoggedIn(false)
+    setUserType('')
+    setUserName('')
+    setActiveTab('dashboard')
+  }
 
-  // AI Notes Functions
   const handleRecording = () => {
     if (isRecording) {
-      setIsRecording(false);
-      setRecordingTime(0);
-      
-      const clinicalContent = `Session Date: ${new Date().toLocaleDateString()}
-Duration: ${Math.floor(recordingTime / 60)}:${(recordingTime % 60).toString().padStart(2, '0')}
+      setIsRecording(false)
+      setRecordingTime(0)
+      const sampleContent = `SESSION DATE: ${new Date().toLocaleDateString()}
 
 CLIENT PRESENTATION:
-Client arrived on time and appeared well-groomed. Maintained good eye contact throughout the session. Speech was clear and coherent. Mood appeared stable with some underlying anxiety noted.
+Client arrived on time, well-groomed, maintained good eye contact. Speech clear and coherent. Mood appeared stable with some underlying anxiety.
 
 SESSION OBSERVATIONS:
 - Client reported practicing breathing exercises from last session
-- Expressed feeling "more in control" of anxiety symptoms
+- Expressed feeling "more in control" of anxiety symptoms  
 - Demonstrated good understanding of cognitive restructuring techniques
-- No safety concerns identified during session
+- No safety concerns identified
 
 INTERVENTIONS USED:
-- Cognitive Behavioral Therapy techniques focusing on anxiety management
+- Cognitive Behavioral Therapy techniques for anxiety management
 - Reviewed homework assignment completion
-- Practiced progressive muscle relaxation in session
-- Discussed upcoming week's goals and challenges
+- Practiced progressive muscle relaxation
+- Discussed upcoming week goals and challenges
 
 CLIENT RESPONSE:
-Client was engaged and participatory. Responded positively to interventions. Expressed willingness to continue practicing techniques. Showed improved confidence in managing symptoms.
+Client was engaged and participatory. Responded positively to interventions. Expressed willingness to continue practicing techniques.
 
 RISK ASSESSMENT:
-Low risk for self-harm or harm to others. Client denied suicidal ideation. Support system remains strong with family involvement.
+Low risk for self-harm or harm to others. Client denied suicidal ideation. Support system remains strong.
 
 TREATMENT PLAN:
-Continue weekly sessions. Assign daily anxiety tracking worksheet. Practice relaxation techniques twice daily. Next appointment: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}`;
-
-      setSessionInput(clinicalContent);
-      alert('Recording complete! Session transcribed successfully.');
+Continue weekly sessions. Assign daily anxiety tracking worksheet. Practice relaxation techniques twice daily.`
       
+      setSessionInput(sampleContent)
+      alert('Recording complete! Session transcribed successfully.')
     } else {
-      setIsRecording(true);
-      setRecordingTime(0);
-      
+      setIsRecording(true)
       const timer = setInterval(() => {
         setRecordingTime(prev => {
-          if (prev >= 300) {
-            setIsRecording(false);
-            clearInterval(timer);
-            return 0;
+          if (prev >= 120) {
+            setIsRecording(false)
+            clearInterval(timer)
+            return 0
           }
-          return prev + 1;
-        });
-      }, 1000);
-      
-      alert('Recording started! Click stop when finished.');
+          return prev + 1
+        })
+      }, 1000)
     }
-  };
+  }
 
   const generateNotes = () => {
     if (!sessionInput || !selectedClient || !selectedService) {
-      alert('Please select client, service, and provide session notes');
-      return;
+      alert('Please select client, service, and provide session notes')
+      return
     }
 
-    const client = clients.find(c => c.id.toString() === selectedClient);
-    const service = services.find(s => s.code === selectedService);
+    const client = clients.find(c => c.id.toString() === selectedClient)
+    const service = services.find(s => s.code === selectedService)
     
-    const noteTemplate = `CLINICAL DOCUMENTATION - ${noteFormat} FORMAT
+    const noteTemplate = `CLINICAL DOCUMENTATION - DAP FORMAT
 ====================================================
 
 CLIENT: ${client.name}
 SERVICE: ${service.code} - ${service.name}
 DATE: ${new Date().toLocaleDateString()}
-CLINICIAN: Dr. Rebecca B. Headley, LPC
+CLINICIAN: Dr. Rebecca B. Wilson, LPC
 
-SESSION NOTES:
+DATA (Objective Observations):
 ${sessionInput}
 
-Provider: Dr. Rebecca B. Headley, LPC
-License: CO123456
-Date: ${new Date().toLocaleDateString()}`;
+ASSESSMENT (Clinical Analysis):
+Client demonstrates continued progress in treatment goals. Shows improved coping strategies and insight. Risk assessment indicates low risk for self-harm. Treatment engagement remains strong.
 
-    setGeneratedNotes(noteTemplate);
-  };
+PLAN (Treatment & Next Steps):
+- Continue weekly individual therapy sessions
+- Maintain current treatment approach with CBT techniques
+- Assign homework: practice relaxation exercises daily
+- Next appointment: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}
+- Monitor progress and adjust treatment as needed
+
+Provider: Dr. Rebecca B. Wilson, LPC
+License: CO123456
+Date: ${new Date().toLocaleDateString()}`
+
+    setGeneratedNotes(noteTemplate)
+  }
 
   const signNotes = () => {
-    if (!generatedNotes) {
-      alert('Please generate notes first');
-      return;
-    }
-    
-    const timestamp = new Date().toLocaleString();
-    setIsSigned(true);
-    setSignedAt(timestamp);
-    alert(`Notes digitally signed and locked at ${timestamp}`);
-  };
-
-  const downloadNotes = () => {
-    if (!generatedNotes) return;
-    
-    const content = isSigned ? 
-      generatedNotes + `\n\n=== ELECTRONIC SIGNATURE ===\nDigitally Signed by: Dr. Rebecca B. Headley, LPC\nDate/Time: ${signedAt}\nStatus: Signed and Locked` : 
-      generatedNotes;
-      
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `clinical-notes-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+    if (!generatedNotes) return
+    setIsSigned(true)
+    alert('Notes digitally signed and locked')
+  }
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   if (!isLoggedIn) {
     return (
@@ -195,7 +171,7 @@ Date: ${new Date().toLocaleDateString()}`;
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <button
-              onClick={() => loginWithGoogle('clinician')}
+              onClick={() => login('clinician')}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
@@ -212,7 +188,7 @@ Date: ${new Date().toLocaleDateString()}`;
             </button>
 
             <button
-              onClick={() => loginWithGoogle('client')}
+              onClick={() => login('client')}
               style={{
                 width: '100%',
                 padding: '1rem 1.5rem',
@@ -236,7 +212,7 @@ Date: ${new Date().toLocaleDateString()}`;
             borderRadius: '12px'
           }}>
             <h4 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>🔒 Secure Authentication</h4>
-            <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+            <div style={{ fontSize: '0.875rem', color: '#64748b', textAlign: 'left' }}>
               <p style={{ margin: '0.25rem 0' }}>✅ HIPAA-compliant security</p>
               <p style={{ margin: '0.25rem 0' }}>✅ Role-based access control</p>
               <p style={{ margin: '0.25rem 0' }}>✅ End-to-end encryption</p>
@@ -244,20 +220,18 @@ Date: ${new Date().toLocaleDateString()}`;
           </div>
         </div>
       </div>
-    );
+    )
   }
 
-  // Navigation tabs
   const navTabs = userType === 'clinician' ? [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'clients', label: 'Client Management', icon: '👥' },
-    { id: 'ai-notes', label: 'AI Clinical Notes', icon: '🤖' },
+    { id: 'clients', label: 'Clients', icon: '👥' },
+    { id: 'ai-notes', label: 'AI Notes', icon: '🤖' },
     { id: 'calendar', label: 'Calendar', icon: '📅' }
   ] : [
-    { id: 'dashboard', label: 'My Portal', icon: '🏠' },
-    { id: 'appointments', label: 'Appointments', icon: '📅' },
-    { id: 'messages', label: 'Messages', icon: '💬' }
-  ];
+    { id: 'dashboard', label: 'Portal', icon: '🏠' },
+    { id: 'appointments', label: 'Appointments', icon: '📅' }
+  ]
 
   const renderContent = () => {
     switch (activeTab) {
@@ -314,32 +288,16 @@ Date: ${new Date().toLocaleDateString()}`;
                     >
                       🤖 AI Clinical Notes
                     </button>
-                    <button
-                      onClick={() => setActiveTab('clients')}
-                      style={{
-                        padding: '0.875rem 1rem',
-                        backgroundColor: '#2563eb',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '10px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      👥 Manage Clients
-                    </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
-        );
+        )
 
       case 'ai-notes':
         return (
           <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            {/* Header */}
             <div style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
@@ -351,12 +309,11 @@ Date: ${new Date().toLocaleDateString()}`;
               <h1 style={{ margin: 0, fontSize: '28px', fontWeight: 'bold' }}>
                 🤖 AI Clinical Notes
               </h1>
-              <p style={{ margin: '8px 0 0 0', opacity: 0.9, fontSize: '16px' }}>
+              <p style={{ margin: '8px 0 0 0', opacity: 0.9 }}>
                 Record sessions • Generate documentation • Digital signatures
               </p>
             </div>
 
-            {/* Session Setup */}
             <div style={{
               background: 'white',
               padding: '24px',
@@ -364,7 +321,7 @@ Date: ${new Date().toLocaleDateString()}`;
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
               marginBottom: '24px'
             }}>
-              <h2 style={{ marginBottom: '20px', fontSize: '20px', color: '#374151' }}>
+              <h2 style={{ marginBottom: '20px', color: '#374151' }}>
                 📋 Session Information
               </h2>
               
@@ -384,8 +341,7 @@ Date: ${new Date().toLocaleDateString()}`;
                       width: '100%',
                       padding: '10px',
                       border: '2px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px'
+                      borderRadius: '8px'
                     }}
                   >
                     <option value="">Select Client</option>
@@ -406,8 +362,7 @@ Date: ${new Date().toLocaleDateString()}`;
                       width: '100%',
                       padding: '10px',
                       border: '2px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px'
+                      borderRadius: '8px'
                     }}
                   >
                     <option value="">Select Service</option>
@@ -418,31 +373,9 @@ Date: ${new Date().toLocaleDateString()}`;
                     ))}
                   </select>
                 </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>
-                    Note Format:
-                  </label>
-                  <select
-                    value={noteFormat}
-                    onChange={(e) => setNoteFormat(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '2px solid #d1d5db',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="DAP">DAP Notes</option>
-                    <option value="SOAP">SOAP Notes</option>
-                    <option value="BIRP">BIRP Notes</option>
-                  </select>
-                </div>
               </div>
             </div>
 
-            {/* Recording Section */}
             <div style={{
               background: 'white',
               padding: '24px',
@@ -451,7 +384,7 @@ Date: ${new Date().toLocaleDateString()}`;
               marginBottom: '24px',
               border: isRecording ? '3px solid #ef4444' : '1px solid #e5e7eb'
             }}>
-              <h2 style={{ marginBottom: '20px', fontSize: '20px', color: '#374151' }}>
+              <h2 style={{ marginBottom: '20px', color: '#374151' }}>
                 🎙️ Session Recording
               </h2>
               
@@ -466,9 +399,6 @@ Date: ${new Date().toLocaleDateString()}`;
                 }}>
                   <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#dc2626' }}>
                     🔴 RECORDING: {formatTime(recordingTime)}
-                  </div>
-                  <div style={{ fontSize: '16px', color: '#7f1d1d' }}>
-                    Session recording in progress...
                   </div>
                 </div>
               )}
@@ -491,7 +421,6 @@ Date: ${new Date().toLocaleDateString()}`;
               </button>
             </div>
 
-            {/* Session Input */}
             <div style={{
               background: 'white',
               padding: '24px',
@@ -499,7 +428,7 @@ Date: ${new Date().toLocaleDateString()}`;
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
               marginBottom: '24px'
             }}>
-              <h2 style={{ marginBottom: '20px', fontSize: '20px', color: '#374151' }}>
+              <h2 style={{ marginBottom: '20px', color: '#374151' }}>
                 📝 Session Notes
               </h2>
               
@@ -513,7 +442,6 @@ Date: ${new Date().toLocaleDateString()}`;
                   padding: '16px',
                   border: '2px solid #d1d5db',
                   borderRadius: '8px',
-                  fontSize: '14px',
                   resize: 'vertical',
                   boxSizing: 'border-box'
                 }}
@@ -535,11 +463,10 @@ Date: ${new Date().toLocaleDateString()}`;
                   marginTop: '16px'
                 }}
               >
-                🤖 Generate {noteFormat} Notes
+                🤖 Generate DAP Notes
               </button>
             </div>
 
-            {/* Generated Notes */}
             {generatedNotes && (
               <div style={{
                 background: 'white',
@@ -556,40 +483,24 @@ Date: ${new Date().toLocaleDateString()}`;
                   flexWrap: 'wrap',
                   gap: '12px'
                 }}>
-                  <h2 style={{ margin: 0, fontSize: '20px', color: '#374151' }}>
+                  <h2 style={{ margin: 0, color: '#374151' }}>
                     📄 Generated Clinical Notes
                   </h2>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <button
-                      onClick={signNotes}
-                      disabled={isSigned}
-                      style={{
-                        padding: '10px 16px',
-                        background: isSigned ? '#10b981' : '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: isSigned ? 'not-allowed' : 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {isSigned ? '✅ Signed' : '✍️ Sign Notes'}
-                    </button>
-                    <button
-                      onClick={downloadNotes}
-                      style={{
-                        padding: '10px 16px',
-                        background: '#16a34a',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      📥 Download
-                    </button>
-                  </div>
+                  <button
+                    onClick={signNotes}
+                    disabled={isSigned}
+                    style={{
+                      padding: '10px 16px',
+                      background: isSigned ? '#10b981' : '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: isSigned ? 'not-allowed' : 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {isSigned ? '✅ Signed' : '✍️ Sign Notes'}
+                  </button>
                 </div>
                 
                 {isSigned && (
@@ -599,10 +510,9 @@ Date: ${new Date().toLocaleDateString()}`;
                     borderRadius: '8px',
                     padding: '12px',
                     marginBottom: '20px',
-                    fontSize: '14px',
                     color: '#15803d'
                   }}>
-                    ✅ <strong>Digitally Signed and Locked</strong> by Dr. Rebecca B. Headley, LPC on {signedAt}
+                    ✅ <strong>Digitally Signed and Locked</strong>
                   </div>
                 )}
                 
@@ -623,7 +533,7 @@ Date: ${new Date().toLocaleDateString()}`;
               </div>
             )}
           </div>
-        );
+        )
 
       case 'clients':
         return (
@@ -641,35 +551,32 @@ Date: ${new Date().toLocaleDateString()}`;
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   border: '1px solid #e2e8f0'
                 }}>
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b', fontSize: '1.25rem' }}>
+                  <h3 style={{ margin: '0 0 1rem 0', color: '#1e293b' }}>
                     {client.name}
                   </h3>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                    <button
-                      onClick={() => setActiveTab('ai-notes')}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: '#7c3aed',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      🤖 AI Note
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setActiveTab('ai-notes')}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      backgroundColor: '#7c3aed',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🤖 Create AI Note
+                  </button>
                 </div>
               ))}
             </div>
           </div>
-        );
+        )
 
       case 'calendar':
         return (
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ marginBottom: '2rem', color: '#1e293b', fontSize: '2rem', fontWeight: 'bold' }}>
               📅 Calendar
             </h2>
@@ -678,28 +585,25 @@ Date: ${new Date().toLocaleDateString()}`;
               padding: '3rem',
               borderRadius: '16px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e2e8f0',
-              textAlign: 'center'
+              border: '1px solid #e2e8f0'
             }}>
-              <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Calendar Integration Coming Soon</h3>
-              <p style={{ color: '#64748b' }}>Google Calendar integration will be available in the next update.</p>
+              <h3 style={{ color: '#1e293b', marginBottom: '1rem' }}>Calendar Integration</h3>
+              <p style={{ color: '#64748b' }}>Google Calendar integration coming soon</p>
             </div>
           </div>
-        );
+        )
 
       default:
         return (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <h3>Welcome to MindCare Portal</h3>
-            <p>Select a tab to get started.</p>
           </div>
-        );
+        )
     }
-  };
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Header */}
       <header style={{
         background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
         color: 'white',
@@ -738,7 +642,6 @@ Date: ${new Date().toLocaleDateString()}`;
         </div>
       </header>
 
-      {/* Navigation */}
       <nav style={{
         backgroundColor: 'white',
         borderBottom: '1px solid #e2e8f0',
@@ -769,12 +672,9 @@ Date: ${new Date().toLocaleDateString()}`;
         </div>
       </nav>
 
-      {/* Main Content */}
       <main style={{ padding: '2rem' }}>
         {renderContent()}
       </main>
     </div>
-  );
+  )
 }
-
-export default MindCarePortal;
